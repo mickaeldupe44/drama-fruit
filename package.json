@@ -1,0 +1,6 @@
+{
+  "name": "drama-fruit",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" }
+}

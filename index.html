@@ -1,0 +1,2317 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drama Fruit</title>
+<meta name="description" content="Une idée, un épisode : l'IA écrit, réalise et monte tes fruit dramas en vidéo verticale, avec voix et son. Abonnements et crédits.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='36' r='24' fill='%23ff3d6e'/%3E%3Cpath d='M32 12c-6 0-10 4-10 4s6 2 10 2 10-2 10-2-4-4-10-4z' fill='%235fe0a0'/%3E%3Ccircle cx='24' cy='34' r='2.5' fill='%23fff3'/%3E%3Ccircle cx='38' cy='42' r='2.5' fill='%23fff3'/%3E%3Ccircle cx='32' cy='28' r='2' fill='%23fff3'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500..900;1,9..144,500..900&family=Figtree:wght@400;500;600;700&family=Anton&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Kitchen-noir : scène prune sombre, projecteur rouge fraise, touche mangue pour les notes et les crédits.
+     Mise en page : une colonne lisible sur téléphone, barre fixe, vues par ancre (#accueil, #studio, #tarifs, #compte).
+     L'accueil est une salle de projection : bande-annonce animée, décors, casting, affiches. */
+  --bg: #130a11;
+  --panel: #1d1119;
+  --panel-2: #27171f;
+  --line: #3b2531;
+  --ink: #fbeff3;
+  --muted: #b596a4;
+  --accent: #ff3d6e;
+  --accent-ink: #1a0509;
+  --mango: #ffbf47;
+  --ok: #5fe0a0;
+  --bad: #ff8585;
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-body: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { color-scheme: dark; -webkit-text-size-adjust: 100%; background: var(--bg); scroll-behavior: smooth; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.5; overflow-x: hidden; }
+body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background: radial-gradient(60% 42% at 88% -6%, rgba(255, 61, 110, .28), transparent 70%), radial-gradient(45% 30% at -5% 100%, rgba(255, 191, 71, .10), transparent 70%); }
+a { color: var(--mango); }
+:focus-visible { outline: 2px solid var(--mango); outline-offset: 2px; }
+[hidden] { display: none !important; }
+button { font: inherit; }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.1; margin: 0; text-wrap: balance; }
+h2 { font-weight: 800; font-size: clamp(26px, 5vw, 36px); }
+h3 { font-weight: 700; font-size: 19px; }
+p { margin: 0; }
+svg.sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+.wrap { position: relative; z-index: 1; max-width: 960px; margin: 0 auto; padding: 0 16px 64px; }
+
+/* Fond quadrillé discret */
+body::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .35;
+  background-image: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px); background-size: 44px 44px; }
+
+/* Barre flottante */
+.nav { position: sticky; top: 10px; z-index: 10; padding: 0 12px; }
+.nav-in { position: relative; max-width: 960px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; gap: 10px; border-radius: 999px; border: 1px solid var(--line); background: rgba(19, 10, 17, .86); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: 0 10px 40px rgba(0,0,0,.35); }
+.beta { font-family: var(--font-body); font-style: normal; font-size: 11px; font-weight: 800; letter-spacing: .04em; color: var(--accent-ink); background: var(--mango); border-radius: 6px; padding: 2px 6px; margin-left: 4px; }
+.nav-links { display: flex; align-items: center; gap: 6px; }
+.burger { display: none; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel-2); cursor: pointer; flex-direction: column; justify-content: center; align-items: center; gap: 5px; padding: 0; }
+.burger span { display: block; width: 18px; height: 2px; background: var(--ink); border-radius: 2px; transition: transform .2s, opacity .2s; }
+.burger[aria-expanded="true"] span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.burger[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
+.burger[aria-expanded="true"] span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+@media (max-width: 700px) {
+  .burger { display: flex; margin-left: auto; }
+  .nav-links { display: none; position: absolute; top: calc(100% + 8px); right: 0; left: 0; flex-direction: column; align-items: stretch; gap: 4px; padding: 10px; border-radius: 20px; border: 1px solid var(--line); background: rgba(19, 10, 17, .96); backdrop-filter: blur(14px); box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+  .nav-links.open { display: flex; }
+  .nav-links a.link { padding: 12px 14px; font-size: 16px; }
+  .nav-links .credits-pill { justify-content: center; padding: 10px; font-size: 15px; }
+}
+
+/* Marque géante + carrousel d'exemples */
+.wordmark { position: relative; z-index: 0; font-family: var(--font-display); font-weight: 900; font-style: italic; font-size: clamp(40px, 12.5vw, 170px); line-height: .9; text-align: center; letter-spacing: -.05em; color: transparent; -webkit-text-stroke: 1.5px rgba(255, 61, 110, .45); margin: 22px 0 -0.18em; user-select: none; white-space: nowrap; overflow: hidden; }
+.examples-kicker { position: relative; z-index: 1; text-align: center; font-size: 14px; letter-spacing: .32em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin: 0 0 14px; }
+.reel-wrap { position: relative; z-index: 1; margin: 0 -16px; }
+.reel { display: flex; gap: 12px; overflow-x: auto; padding: 6px 16px 14px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.reel::-webkit-scrollbar { display: none; }
+.reel-card { position: relative; flex: 0 0 min(64vw, 300px); aspect-ratio: 9 / 16; scroll-snap-align: center; border-radius: 22px; overflow: hidden; background: #000; border: 1px solid var(--line); box-shadow: 0 20px 50px rgba(0,0,0,.45); }
+.reel-card video, .reel-card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; background: #000; }
+.reel-card iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #000; }
+.views { position: absolute; top: 12px; right: 12px; display: inline-flex; align-items: center; gap: 6px; background: rgba(0,0,0,.6); backdrop-filter: blur(8px); color: #fff; font-weight: 800; font-size: 14px; padding: 6px 11px; border-radius: 999px; z-index: 2; }
+.views svg { width: 18px; height: 18px; fill: none; stroke: #fff; stroke-width: 2; }
+.reel-card .cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 40px 14px 14px; background: linear-gradient(transparent, rgba(0,0,0,.85)); color: #fff; font-weight: 700; font-size: 14px; line-height: 1.2; z-index: 2; }
+.reel-card .cap small { display: block; font-weight: 500; color: #e8d7de; font-size: 12px; margin-top: 3px; }
+.reel-card .sound { position: absolute; left: 12px; top: 12px; z-index: 3; width: 34px; height: 34px; border-radius: 50%; border: none; background: rgba(0,0,0,.6); color: #fff; display: grid; place-items: center; cursor: pointer; font-size: 15px; }
+.reel-card .play { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 60px; height: 60px; border-radius: 50%; background: rgba(255,255,255,.92); display: grid; place-items: center; box-shadow: 0 10px 30px rgba(0,0,0,.5); z-index: 2; pointer-events: none; }
+.reel-card .play::after { content: ""; width: 0; height: 0; border-left: 20px solid #1a0509; border-top: 12px solid transparent; border-bottom: 12px solid transparent; margin-left: 5px; }
+.reel-card.placeholder { background: linear-gradient(170deg, #241219, #0d0609); }
+.reel-card.placeholder .ph { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 8px; text-align: center; padding: 20px; color: #fff; text-shadow: 0 1px 8px rgba(0,0,0,.8); font-weight: 700; }
+.reel-card.placeholder .ph small { font-weight: 500; color: #e8d7de; }
+.reel-card a.tt { position: absolute; inset: 0; z-index: 3; }
+.reel { justify-content: safe center; }
+.reel-note { position: relative; z-index: 1; text-align: center; color: var(--muted); font-size: 13px; margin: 4px 0 0; }
+.hero-copy { padding: 34px 0 10px; text-align: center; max-width: 640px; margin: 0 auto; }
+.hero-copy .lede { margin-left: auto; margin-right: auto; }
+.hero-copy .cta-row, .hero-copy .trust { justify-content: center; }
+.hero-copy h1 { font-weight: 900; font-style: italic; font-size: clamp(38px, 8vw, 72px); letter-spacing: -.025em; line-height: .95; font-variation-settings: "opsz" 144; }
+.hero-copy h1 em { font-style: italic; color: var(--accent); }
+.feature-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+.feature-row input { max-width: 180px; padding: 8px 10px; font-size: 13.5px; }
+.brand { font-family: var(--font-display); font-style: italic; font-weight: 900; font-size: 22px; color: var(--ink); text-decoration: none; letter-spacing: -.02em; margin-right: auto; display: inline-flex; align-items: center; gap: 8px; }
+.brand b { color: var(--accent); font-weight: 900; }
+.brand svg { width: 26px; height: 30px; }
+.nav a.link { color: var(--muted); text-decoration: none; font-weight: 600; font-size: 14px; padding: 6px 10px; border-radius: 999px; }
+.nav a.link[aria-current="page"] { color: var(--ink); background: var(--panel-2); }
+.credits-pill { display: inline-flex; align-items: center; gap: 6px; background: var(--panel-2); border: 1px solid var(--line); color: var(--mango); font-weight: 700; font-size: 13px; padding: 5px 10px; border-radius: 999px; text-decoration: none; }
+.banner { position: relative; z-index: 1; background: var(--mango); color: #2a1900; font-size: 14px; font-weight: 600; padding: 10px 16px; text-align: center; }
+
+/* Héros + bande-annonce */
+.hero { padding: 36px 0 10px; display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); gap: 28px; align-items: center; }
+@media (max-width: 760px) { .hero { grid-template-columns: 1fr; gap: 22px; padding-top: 26px; } }
+.eyebrow { font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin: 0 0 12px; font-weight: 600; }
+.hero h1 { font-weight: 900; font-style: italic; font-size: clamp(42px, 8.5vw, 80px); letter-spacing: -.025em; line-height: .95; font-variation-settings: "opsz" 144; }
+.hero h1 em { font-style: italic; color: var(--accent); }
+.lede { font-size: 17.5px; max-width: 44ch; margin: 18px 0 0; }
+.cta-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px; align-items: center; }
+.trust { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 16px; font-size: 13px; color: var(--muted); }
+.trust span::before { content: "✓ "; color: var(--ok); font-weight: 800; }
+
+
+/* Sections génériques */
+.section { margin-top: 44px; }
+.section-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.kicker { font-family: var(--font-display); font-style: italic; font-weight: 700; color: var(--accent); font-size: 14px; letter-spacing: .08em; text-transform: uppercase; }
+.sub { color: var(--muted); font-size: 15px; margin-top: 6px; max-width: 62ch; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 20px; padding: 18px; }
+.btn { font-weight: 700; font-size: 15px; cursor: pointer; border-radius: 999px; padding: 12px 20px; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; transition: transform .12s, filter .15s, box-shadow .15s; }
+.btn:hover { filter: brightness(1.06); box-shadow: 0 8px 24px rgba(255,61,110,.3); }
+.btn:active { transform: translateY(1px); }
+.btn.secondary { background: transparent; color: var(--ink); border-color: var(--line); }
+.btn.secondary:hover { box-shadow: none; border-color: var(--muted); }
+.btn.ghost { background: transparent; color: var(--mango); border-color: transparent; padding-left: 8px; padding-right: 8px; }
+.btn.ghost:hover { box-shadow: none; }
+.btn.small { padding: 8px 14px; font-size: 13.5px; }
+.btn.block { width: 100%; justify-content: center; }
+.btn:disabled { opacity: .5; cursor: not-allowed; filter: none; transform: none; box-shadow: none; }
+
+/* Étapes */
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+@media (max-width: 640px) { .grid3 { grid-template-columns: 1fr; } }
+.step { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 16px; position: relative; overflow: hidden; }
+.step .n { font-family: var(--font-display); font-style: italic; font-weight: 900; font-size: 34px; color: var(--accent); line-height: 1; }
+.step h3 { margin-top: 8px; }
+.step p { color: var(--muted); font-size: 14.5px; margin-top: 6px; }
+.step .ico { position: absolute; right: 12px; top: 12px; width: 44px; height: 44px; opacity: .9; }
+
+/* Décors */
+.decors { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }
+@media (max-width: 640px) { .decors { grid-template-columns: repeat(2, 1fr); gap: 10px; } }
+.decor { margin: 0; border-radius: 16px; overflow: hidden; border: 1px solid var(--line); background: var(--panel); position: relative; aspect-ratio: 3 / 4; cursor: default; }
+.decor img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .6s ease; }
+.decor:hover img { transform: scale(1.05); }
+.decor figcaption { position: absolute; left: 0; right: 0; bottom: 0; padding: 36px 12px 12px; background: linear-gradient(transparent, rgba(0,0,0,.8)); }
+.decor b { display: block; font-family: var(--font-display); font-weight: 800; font-size: 17px; line-height: 1.1; }
+.decor span { font-size: 12px; color: #e8d7de; }
+
+/* Formulaires */
+.field { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin: 16px 0 7px; letter-spacing: .02em; }
+.field small { font-weight: 400; }
+select, textarea, input[type="text"], input[type="email"], input[type="password"] { width: 100%; background: var(--panel-2); border: 1px solid var(--line); color: var(--ink); border-radius: 12px; padding: 11px 12px; font: inherit; font-size: 15px; }
+select { appearance: none; -webkit-appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 18px) 55%, calc(100% - 13px) 55%; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 34px; }
+textarea { min-height: 96px; resize: vertical; line-height: 1.45; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 460px) { .row { grid-template-columns: 1fr; } }
+.check { display: flex; align-items: center; gap: 10px; font-size: 15px; padding: 6px 0; }
+.check input { width: 20px; height: 20px; accent-color: var(--accent); margin: 0; }
+.check.locked { color: var(--muted); }
+.lock { font-size: 12px; color: var(--mango); font-weight: 700; margin-left: 4px; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; align-items: center; }
+.note { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
+.alert { border-radius: 12px; padding: 10px 12px; font-size: 14px; margin-top: 12px; border: 1px solid; }
+.alert.bad { color: var(--bad); border-color: rgba(255, 133, 133, .35); background: rgba(255, 133, 133, .07); }
+.alert.warn { color: var(--mango); border-color: rgba(255, 191, 71, .35); background: rgba(255, 191, 71, .07); }
+.alert.ok { color: var(--ok); border-color: rgba(95, 224, 160, .35); background: rgba(95, 224, 160, .07); }
+.cost { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; color: var(--mango); font-variant-numeric: tabular-nums; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.chips button { background: var(--panel-2); border: 1px solid var(--line); color: var(--ink); border-radius: 999px; padding: 6px 12px; font-size: 13px; cursor: pointer; text-align: left; }
+.chips button:hover { border-color: var(--accent); }
+.imgpick { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.imgpick img { width: 48px; height: 84px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); background: #000; }
+input[type="file"] { color: var(--muted); font-size: 13px; max-width: 100%; }
+
+/* Choix du décor (studio) */
+.decor-pick { display: flex; gap: 10px; overflow-x: auto; padding: 4px 2px 8px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+.decor-pick button { flex: 0 0 104px; scroll-snap-align: start; border: 2px solid var(--line); background: var(--panel-2); border-radius: 14px; padding: 0; overflow: hidden; cursor: pointer; color: var(--ink); position: relative; aspect-ratio: 3 / 4; }
+.decor-pick button img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.decor-pick button.text { aspect-ratio: auto; flex-basis: auto; padding: 10px 14px; border-radius: 999px; font-weight: 600; font-size: 14px; }
+.decor-pick button.text span { position: static; background: none; padding: 0; font-size: 14px; }
+.decor-pick button span { position: absolute; left: 0; right: 0; bottom: 0; padding: 18px 6px 6px; font-size: 11.5px; font-weight: 700; background: linear-gradient(transparent, rgba(0,0,0,.85)); line-height: 1.15; }
+.decor-pick button[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(255,61,110,.35); }
+.decor-pick button.auto { display: grid; place-items: center; font-weight: 700; font-size: 13px; padding: 8px; background: linear-gradient(160deg, var(--panel-2), var(--bg)); }
+.decor-pick button.auto span { position: static; background: none; padding: 0; font-size: 13px; }
+
+/* Studio : étapes */
+.stages { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 18px; }
+.stage { border: 1px solid var(--line); border-radius: 12px; padding: 10px; font-size: 13px; color: var(--muted); display: flex; gap: 8px; align-items: center; }
+.stage i { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; font-style: normal; font-size: 12px; font-weight: 700; flex: none; }
+.stage.on { color: var(--ink); border-color: var(--accent); }
+.stage.on i { border-color: var(--accent); color: var(--accent); }
+.stage.done { color: var(--ok); }
+.stage.done i { border-color: var(--ok); background: var(--ok); color: var(--accent-ink); }
+@media (max-width: 460px) { .stages { grid-template-columns: 1fr; } }
+.progress { height: 10px; background: var(--panel-2); border-radius: 999px; overflow: hidden; border: 1px solid var(--line); margin-top: 12px; }
+.progress > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--mango)); transition: width .6s ease; }
+.progress.indeterminate > i { width: 35%; animation: slide 1.2s ease-in-out infinite alternate; }
+@keyframes slide { from { transform: translateX(-20%); } to { transform: translateX(200%); } }
+
+/* Plan de tournage */
+.plan-title { font-family: var(--font-display); font-size: 26px; font-weight: 800; line-height: 1.1; margin-top: 14px; }
+.plan-logline { font-family: var(--font-display); font-style: italic; color: var(--mango); font-size: 17px; margin-top: 4px; }
+.cast-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.seat { display: inline-flex; align-items: center; gap: 8px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px 4px 4px; font-weight: 600; font-size: 13.5px; }
+.seat .av { width: 34px; height: 34px; border-radius: 50%; background: var(--bg); display: grid; place-items: center; overflow: hidden; }
+.seat .av svg { width: 30px; height: 36px; margin-top: 6px; }
+.seat small { color: var(--muted); font-weight: 400; }
+.shots { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+.shot { border: 1px solid var(--line); border-radius: 14px; padding: 12px; background: var(--panel-2); }
+.shot-head { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; color: var(--muted); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.shot .visual { font-size: 13.5px; color: var(--muted); margin-top: 6px; font-style: italic; }
+.lines { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.line { display: grid; grid-template-columns: minmax(80px, 110px) 1fr; gap: 8px; align-items: center; font-size: 15px; }
+.line .who { color: var(--accent); font-weight: 700; font-size: 14px; }
+.line input { padding: 8px 10px; font-size: 14.5px; }
+.line .static { padding: 2px 0; }
+@media (max-width: 420px) { .line { grid-template-columns: 1fr; gap: 2px; } }
+
+/* Résultat */
+.result { display: grid; grid-template-columns: minmax(0, 280px) 1fr; gap: 16px; align-items: start; margin-top: 16px; }
+@media (max-width: 560px) { .result { grid-template-columns: 1fr; } }
+.screen { position: relative; aspect-ratio: 9 / 16; width: 100%; max-width: 280px; margin: 0 auto; background: #000; border-radius: 18px; border: 1px solid var(--line); overflow: hidden; display: grid; place-items: center; color: var(--ink); font-size: 13px; text-align: center; }
+.screen svg.bg { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .9; }
+.screen video { position: relative; z-index: 2; width: 100%; height: 100%; object-fit: contain; display: block; background: #000; border-radius: 18px; }
+.screen .idle { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 8px; align-items: center; padding: 12px; text-shadow: 0 1px 8px rgba(0,0,0,.8); font-weight: 600; }
+.screen .idle .big { font-size: 42px; line-height: 1; }
+.screen .idle .big.spin { animation: clap 1.6s ease-in-out infinite; display: inline-block; }
+@keyframes clap { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-12deg); } }
+.side { display: flex; flex-direction: column; gap: 10px; }
+.kv { font-size: 13.5px; color: var(--muted); }
+.kv b { color: var(--ink); font-weight: 600; }
+.caption-box { background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 14px; white-space: pre-wrap; }
+
+/* Tarifs */
+.plans { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 16px; }
+@media (max-width: 860px) { .plans { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 460px) { .plans { grid-template-columns: 1fr; } }
+.plan { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 10px; position: relative; }
+.plan.current { border-color: var(--ok); }
+.plan.popular { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset, 0 20px 50px rgba(255,61,110,.15); background: linear-gradient(170deg, #2a1420, var(--panel)); }
+.plan .tag { position: absolute; top: -10px; right: 12px; background: var(--accent); color: var(--accent-ink); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; }
+.plan.current .tag { background: var(--ok); }
+.plan h3 { font-size: 22px; font-weight: 800; }
+.price { font-family: var(--font-display); font-weight: 900; font-size: 34px; line-height: 1; font-variant-numeric: tabular-nums; }
+.price small { font-family: var(--font-body); font-size: 13px; color: var(--muted); font-weight: 500; }
+.plan ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; color: var(--muted); }
+.plan ul li::before { content: "✓"; color: var(--ok); font-weight: 800; margin-right: 8px; }
+.plan .btn { margin-top: auto; justify-content: center; }
+.packs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+@media (max-width: 520px) { .packs { grid-template-columns: 1fr; } }
+.pack { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.pack b { font-size: 17px; }
+.pack span { color: var(--muted); font-size: 13px; }
+
+/* Compte */
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+@media (max-width: 520px) { .stats { grid-template-columns: 1fr 1fr; } }
+.stat { background: var(--panel-2); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+.stat .v { font-family: var(--font-display); font-weight: 800; font-size: 26px; line-height: 1; font-variant-numeric: tabular-nums; }
+.stat .v.mango { color: var(--mango); }
+.stat .l { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+.list { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.list li { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 14px; }
+.list .t { font-weight: 600; }
+.list .m { color: var(--muted); font-size: 12.5px; }
+.chars { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.char-card { width: 92px; text-align: center; font-size: 12.5px; }
+.char-card img { width: 92px; height: 140px; object-fit: cover; border-radius: 12px; border: 1px solid var(--line); background: #000; display: block; }
+.char-card .del { background: none; border: none; color: var(--bad); cursor: pointer; font-size: 12px; padding: 2px; }
+.empty { color: var(--muted); font-size: 14px; margin-top: 10px; }
+
+/* Connexion */
+.auth { max-width: 440px; margin: 30px auto 0; }
+.tabs { display: flex; gap: 6px; background: var(--panel-2); border-radius: 999px; padding: 4px; margin-bottom: 8px; }
+.tabs button { flex: 1; border: none; background: transparent; color: var(--muted); font-weight: 700; padding: 9px; border-radius: 999px; cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); }
+.or { text-align: center; color: var(--muted); font-size: 13px; margin: 12px 0; }
+
+/* FAQ */
+details { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); margin-top: 8px; }
+details summary { cursor: pointer; padding: 12px 14px; font-weight: 600; list-style: none; display: flex; justify-content: space-between; gap: 8px; }
+details summary::-webkit-details-marker { display: none; }
+details summary::after { content: "+"; color: var(--accent); font-weight: 800; }
+details[open] summary::after { content: "–"; }
+details .inner { padding: 0 14px 12px; color: var(--muted); font-size: 14.5px; }
+
+/* Bandeau final */
+.final { margin-top: 44px; border-radius: 24px; padding: 28px 20px; text-align: center; background: radial-gradient(80% 120% at 50% 0%, #3a1626, var(--panel)); border: 1px solid var(--line); }
+.final h2 { font-style: italic; font-weight: 900; font-size: clamp(28px, 6vw, 44px); }
+.final p { color: var(--muted); margin-top: 8px; }
+
+footer { margin-top: 40px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 18px; display: flex; flex-wrap: wrap; gap: 8px 18px; }
+footer a { color: var(--muted); }
+.toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-weight: 600; font-size: 14px; z-index: 50; box-shadow: 0 10px 30px rgba(0,0,0,.4); max-width: 90vw; }
+.view[hidden] { display: none; }
+
+/* ===== Accueil v2 : vitrine vidéo ===== */
+.wrap.wide { max-width: 1200px; }
+.home-bleed { margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw); }
+.pill-new { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: rgba(39, 23, 31, .8); border-radius: 999px; padding: 5px 12px 5px 5px; font-size: 13px; font-weight: 600; color: var(--ink); text-decoration: none; }
+.pill-new b { background: var(--accent); color: var(--accent-ink); border-radius: 999px; padding: 2px 8px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+.grad { background: linear-gradient(95deg, var(--accent) 10%, var(--mango) 90%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+.h-hero { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: 40px; align-items: center; padding: 48px 0 24px; }
+.h-hero h1 { font-weight: 900; font-style: italic; font-size: clamp(44px, 7.4vw, 92px); letter-spacing: -.035em; line-height: .92; margin-top: 18px; font-variation-settings: "opsz" 144; }
+.h-hero h1 em { font-style: italic; }
+.h-hero .lede { font-size: 18px; color: #e9d6de; max-width: 46ch; }
+.h-hero .btn.big { padding: 16px 26px; font-size: 17px; }
+.creators { display: flex; align-items: center; gap: 12px; margin-top: 22px; font-size: 14px; color: var(--muted); }
+.creators .faces { display: flex; }
+.creators .faces span { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-size: 19px; background: var(--panel-2); border: 2px solid var(--bg); margin-left: -10px; }
+.creators .faces span:first-child { margin-left: 0; }
+.creators b { color: var(--ink); }
+@media (max-width: 860px) { .h-hero { grid-template-columns: 1fr; text-align: center; padding-top: 28px; gap: 28px; } .h-hero .lede { margin-left: auto; margin-right: auto; } .h-hero .cta-row, .h-hero .creators, .h-hero .trust { justify-content: center; } }
+
+/* Scène de téléphones */
+.stage3 { position: relative; height: clamp(460px, 62vw, 640px); }
+.phone { position: absolute; aspect-ratio: 9 / 16; border-radius: 34px; padding: 8px; background: linear-gradient(160deg, #3a2430, #120910); box-shadow: 0 40px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.06) inset; }
+.phone .scr { position: relative; width: 100%; height: 100%; border-radius: 27px; overflow: hidden; background: #000; }
+.phone video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.phone.main { height: 100%; left: 50%; top: 0; transform: translateX(-50%); z-index: 3; }
+.phone.side { height: 76%; top: 12%; z-index: 1; opacity: .9; filter: saturate(.9); }
+.phone.side.l { left: 2%; transform: rotate(-8deg); }
+.phone.side.r { right: 2%; transform: rotate(8deg); }
+.phone .tt-ui { position: absolute; right: 10px; bottom: 90px; display: flex; flex-direction: column; gap: 14px; z-index: 2; color: #fff; font-size: 11px; font-weight: 700; text-align: center; }
+.phone .tt-ui i { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: rgba(0,0,0,.35); font-style: normal; font-size: 18px; margin: 0 auto 2px; }
+.phone .tt-cap { position: absolute; left: 12px; right: 60px; bottom: 16px; z-index: 2; color: #fff; font-size: 12.5px; line-height: 1.3; text-shadow: 0 1px 6px rgba(0,0,0,.8); }
+.phone .tt-cap b { display: block; font-size: 13.5px; }
+.floaty { position: absolute; z-index: 4; display: inline-flex; align-items: center; gap: 8px; background: rgba(29, 17, 25, .9); backdrop-filter: blur(10px); border: 1px solid var(--line); border-radius: 14px; padding: 9px 12px; font-size: 13px; font-weight: 700; box-shadow: 0 16px 40px rgba(0,0,0,.45); animation: bob 5s ease-in-out infinite; white-space: nowrap; }
+.floaty small { display: block; font-weight: 500; color: var(--muted); font-size: 11.5px; }
+.floaty .ic { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; font-size: 16px; background: var(--panel-2); }
+.floaty.a { left: 0; top: 14%; }
+.floaty.b { right: 0; top: 46%; animation-delay: -1.6s; }
+.floaty.c { left: 6%; bottom: 8%; animation-delay: -3.2s; }
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@media (max-width: 560px) { .phone.side { display: none; } .floaty.a { left: -4px; } .floaty.b { right: -4px; } .floaty.c { display: none; } }
+
+/* Bandeau de logos de modèles */
+.models-strip { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 28px; margin: 18px 0 0; color: var(--muted); font-weight: 700; font-size: 14px; letter-spacing: .02em; }
+.models-strip span { opacity: .8; }
+.models-strip .lbl { font-weight: 500; opacity: 1; letter-spacing: .12em; text-transform: uppercase; font-size: 11.5px; width: 100%; text-align: center; }
+
+/* Mur de vidéos défilant */
+.marquee-sec { margin-top: 56px; }
+.center-head { text-align: center; max-width: 760px; margin: 0 auto 22px; padding: 0 16px; }
+.center-head h2 { font-size: clamp(30px, 5vw, 52px); font-weight: 900; font-style: italic; letter-spacing: -.02em; }
+.center-head h2 em { font-style: italic; }
+.center-head .sub { margin: 10px auto 0; }
+.marquee { overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); }
+.marquee + .marquee { margin-top: 14px; }
+.track { display: flex; gap: 14px; width: max-content; animation: scrollx 70s linear infinite; }
+.marquee.rev .track { animation-direction: reverse; animation-duration: 84s; }
+.marquee:hover .track { animation-play-state: paused; }
+@keyframes scrollx { to { transform: translateX(calc(-50% - 7px)); } }
+.vcard { position: relative; flex: none; width: clamp(150px, 17vw, 210px); aspect-ratio: 9 / 16; border-radius: 20px; overflow: hidden; background: #000 center / cover no-repeat; border: 1px solid var(--line); }
+.vcard video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.vcard .who { position: absolute; left: 10px; right: 10px; bottom: 10px; z-index: 2; color: #fff; font-size: 12.5px; font-weight: 700; line-height: 1.25; text-shadow: 0 1px 6px rgba(0,0,0,.9); }
+.vcard .who small { display: block; font-weight: 500; color: #eedde4; font-size: 11px; }
+.vcard::after { content: ""; position: absolute; inset: 55% 0 0; background: linear-gradient(transparent, rgba(0,0,0,.75)); pointer-events: none; }
+.vcard .tag2 { position: absolute; top: 10px; left: 10px; z-index: 2; background: rgba(0,0,0,.55); backdrop-filter: blur(6px); color: #fff; border-radius: 999px; font-size: 11px; font-weight: 700; padding: 4px 9px; }
+
+/* Modes de création */
+.modes { display: flex; flex-direction: column; gap: 22px; margin-top: 26px; }
+.mode { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: center; background: linear-gradient(160deg, var(--panel), #160c13); border: 1px solid var(--line); border-radius: 28px; padding: 28px; overflow: hidden; position: relative; }
+.mode:nth-child(even) .mode-media { order: 2; }
+.mode-media { position: relative; display: flex; justify-content: center; gap: 12px; min-height: 340px; align-items: center; }
+.mode-media .vcard { width: min(42%, 220px); box-shadow: 0 24px 50px rgba(0,0,0,.5); }
+.mode-media .vcard.tilt-l { transform: rotate(-4deg) translateY(10px); }
+.mode-media .vcard.tilt-r { transform: rotate(4deg) translateY(-10px); }
+.mode h3 { font-size: clamp(26px, 3.4vw, 38px); font-weight: 900; font-style: italic; letter-spacing: -.02em; margin-top: 10px; }
+.mode p.d { color: #dcc7d0; font-size: 16.5px; margin-top: 12px; max-width: 48ch; }
+.mode ul { list-style: none; padding: 0; margin: 16px 0 0; display: flex; flex-direction: column; gap: 8px; font-size: 15px; }
+.mode ul li::before { content: "✓"; color: var(--ok); font-weight: 800; margin-right: 10px; }
+.mode .badge-n { display: inline-block; font-size: 11.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); color: var(--mango); }
+.mode .badge-n.hot { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.mock { width: min(100%, 380px); background: var(--panel-2); border: 1px solid var(--line); border-radius: 18px; padding: 14px; font-size: 13.5px; box-shadow: 0 24px 50px rgba(0,0,0,.45); }
+.mock .ln { display: grid; grid-template-columns: 74px 1fr; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); }
+.mock .ln:first-of-type { border-top: 0; }
+.mock .ln b { color: var(--accent); }
+.mock .bubble { background: var(--bg); border: 1px solid var(--line); border-radius: 14px 14px 14px 4px; padding: 10px 12px; margin-top: 10px; color: var(--ink); }
+.mock .bubble.me { border-radius: 14px 14px 4px 14px; background: rgba(255, 61, 110, .12); border-color: rgba(255, 61, 110, .35); margin-left: 30px; }
+.mock .typing { display: inline-flex; gap: 4px; }
+.mock .typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: blink 1.2s infinite; }
+.mock .typing i:nth-child(2) { animation-delay: .2s; } .mock .typing i:nth-child(3) { animation-delay: .4s; }
+@keyframes blink { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
+.mode-media .mock-wrap { display: flex; flex-direction: column; gap: 12px; align-items: center; width: 100%; }
+@media (max-width: 820px) { .mode { grid-template-columns: 1fr; padding: 20px; gap: 18px; } .mode:nth-child(even) .mode-media { order: 0; } .mode-media { min-height: 0; } }
+
+/* Tout est inclus */
+.feat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 22px; }
+@media (max-width: 860px) { .feat-grid { grid-template-columns: repeat(2, 1fr); } }
+.feat { background: var(--panel); border: 1px solid var(--line); border-radius: 20px; padding: 18px; transition: border-color .2s, transform .2s; }
+.feat:hover { border-color: var(--accent); transform: translateY(-3px); }
+.feat .em { font-size: 26px; }
+.feat h3 { font-size: 18px; margin-top: 10px; }
+.feat p { color: var(--muted); font-size: 14px; margin-top: 6px; }
+
+/* Avant / Avec */
+.versus { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 22px; }
+@media (max-width: 720px) { .versus { grid-template-columns: 1fr; } }
+.vs { border-radius: 24px; padding: 22px; border: 1px solid var(--line); }
+.vs.bad-side { background: var(--panel); }
+.vs.good-side { background: linear-gradient(160deg, #3a1626, #1d1119 70%); border-color: var(--accent); }
+.vs h3 { font-size: 22px; font-style: italic; font-weight: 900; }
+.vs ul { list-style: none; padding: 0; margin: 14px 0 0; display: flex; flex-direction: column; gap: 10px; font-size: 15px; }
+.vs.bad-side li { color: var(--muted); }
+.vs.bad-side li::before { content: "✕"; color: var(--bad); font-weight: 800; margin-right: 10px; }
+.vs.good-side li::before { content: "✓"; color: var(--ok); font-weight: 800; margin-right: 10px; }
+
+/* Épisode complet */
+.full-ep { display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); gap: 32px; align-items: center; margin-top: 22px; background: var(--panel); border: 1px solid var(--line); border-radius: 28px; padding: 24px; }
+.full-ep .phone { position: relative; width: 100%; max-width: 300px; margin: 0 auto; }
+.full-ep .phone video { object-fit: contain; }
+.full-ep h3 { font-size: clamp(26px, 3.4vw, 36px); font-style: italic; font-weight: 900; }
+.full-ep .script { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+.full-ep .script div { background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 9px 12px; font-size: 14.5px; }
+.full-ep .script b { color: var(--accent); margin-right: 6px; }
+@media (max-width: 720px) { .full-ep { grid-template-columns: 1fr; padding: 18px; } }
+
+/* Bandeau final vidéo */
+.final.video-final { position: relative; overflow: hidden; padding: 64px 20px; border-color: var(--accent); }
+.final .bgwall { position: absolute; inset: -20px; display: flex; gap: 10px; opacity: .22; filter: blur(1px) saturate(1.1); z-index: 0; justify-content: center; }
+.final .bgwall .vcard { width: 160px; border-radius: 16px; }
+.final .bgwall .vcard:nth-child(even) { margin-top: 60px; }
+.final .fg { position: relative; z-index: 1; }
+.final.video-final::before { content: ""; position: absolute; inset: 0; z-index: 0; background: radial-gradient(70% 90% at 50% 50%, rgba(19,10,17,.55), rgba(19,10,17,.92)); }
+.final.video-final h2 { font-size: clamp(32px, 6vw, 60px); }
+.btn.big { padding: 16px 26px; font-size: 17px; }
+
+/* Apparition au défilement */
+.reveal { opacity: 0; transform: translateY(24px); transition: opacity .7s ease, transform .7s ease; }
+.reveal.in { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) { .track, .floaty { animation: none !important; } .reveal { opacity: 1; transform: none; } .marquee { overflow-x: auto; } }
+
+/* Thèmes */
+.themes { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-top: 22px; }
+@media (max-width: 900px) { .themes { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 560px) { .themes { grid-template-columns: repeat(2, 1fr); } .themes .theme:last-child { grid-column: span 2; aspect-ratio: 16 / 12; } }
+.theme { position: relative; aspect-ratio: 3 / 4.4; border-radius: 22px; overflow: hidden; border: 1px solid var(--line); background: #000; padding: 0; cursor: pointer; text-align: left; color: #fff; transition: transform .25s, border-color .25s, box-shadow .25s; }
+.theme video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .6s ease; }
+.theme:hover { transform: translateY(-4px); border-color: var(--accent); box-shadow: 0 24px 50px rgba(255, 61, 110, .2); }
+.theme:hover video { transform: scale(1.06); }
+.theme::after { content: ""; position: absolute; inset: 0 0 50%; background: linear-gradient(rgba(0,0,0,.8), transparent); }
+.theme .tl { position: absolute; left: 12px; right: 12px; top: 12px; z-index: 2; display: flex; flex-direction: column; gap: 4px; }
+.theme .tn { display: block; text-shadow: 0 1px 8px rgba(0,0,0,.8); z-index: 2; font-family: var(--font-display); font-style: italic; font-weight: 900; font-size: 18px; line-height: 1.1; }
+.theme .tx { display: block; z-index: 2; font-size: 12px; color: #eedde4; }
+/* Liste d'épisodes */
+.ep-list { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.ep-item { display: grid; grid-template-columns: 44px 1fr auto; gap: 12px; align-items: center; width: 100%; text-align: left; background: var(--panel-2); border: 1px solid var(--line); border-radius: 14px; padding: 6px 14px 6px 6px; color: var(--ink); cursor: pointer; transition: border-color .2s, background .2s; }
+.ep-item img { width: 44px; height: 62px; object-fit: cover; border-radius: 9px; display: block; }
+.ep-item b { display: block; font-size: 15px; }
+.ep-item small { color: var(--muted); font-size: 12.5px; }
+.ep-item i { font-style: normal; color: var(--accent); font-size: 14px; }
+.ep-item:hover { border-color: var(--muted); }
+.ep-item[aria-current="true"] { border-color: var(--accent); background: linear-gradient(90deg, rgba(255,61,110,.14), var(--panel-2)); }
+.vcard[data-play-ep] { cursor: pointer; }
+
+/* ===== Espace compte : tableau de bord ===== */
+#view-compte { max-width: 1200px !important; }
+.dash { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 24px; align-items: start; padding-top: 28px; }
+.dash-side { position: sticky; top: 84px; display: flex; flex-direction: column; gap: 12px; }
+.who-card { display: flex; gap: 12px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 12px; }
+.avatar { width: 46px; height: 46px; flex: none; border-radius: 14px; display: grid; place-items: center; font-size: 24px; background: linear-gradient(140deg, #3a1626, var(--panel-2)); border: 1px solid var(--line); }
+.who-name { font-weight: 700; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.who-mail { color: var(--muted); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.credit-box { background: linear-gradient(160deg, #3a1626, var(--panel) 75%); border: 1px solid var(--line); border-radius: 18px; padding: 14px; }
+.cb-top { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--muted); font-weight: 600; }
+.cb-val { font-family: var(--font-display); font-weight: 900; font-size: 34px; line-height: 1.1; color: var(--mango); font-variant-numeric: tabular-nums; margin-top: 4px; }
+.cb-val small { font-family: var(--font-body); font-size: 13px; color: var(--muted); font-weight: 500; margin-left: 6px; }
+.meter { height: 8px; background: var(--panel-2); border-radius: 999px; overflow: hidden; margin-top: 8px; border: 1px solid var(--line); }
+.meter i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--mango)); border-radius: 999px; transition: width .6s ease; }
+.plan-chip { display: inline-block; font-size: 11.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); }
+.plan-chip.free { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); }
+.dash-nav { display: flex; flex-direction: column; gap: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 8px; }
+.dash-nav button, .dash-nav a { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; border: 0; background: transparent; color: var(--muted); font-weight: 600; font-size: 14.5px; padding: 10px 12px; border-radius: 12px; cursor: pointer; text-decoration: none; }
+.dash-nav button span, .dash-nav a span { width: 22px; text-align: center; }
+.dash-nav button:hover { background: var(--panel-2); color: var(--ink); }
+.dash-nav button[aria-current="true"] { background: var(--panel-2); color: var(--ink); box-shadow: inset 3px 0 0 var(--accent); }
+.dash-nav .count { margin-left: auto; font-size: 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; color: var(--muted); }
+.dash-nav .dash-new { margin-top: 6px; background: var(--accent); color: var(--accent-ink); justify-content: center; font-weight: 700; }
+.dash-main, .dash-side { min-width: 0; }
+.dash { grid-template-columns: 260px minmax(0, 1fr); }
+.dash-title { font-weight: 900; font-style: italic; font-size: clamp(30px, 4.6vw, 46px); letter-spacing: -.02em; }
+.panel-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.stats4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 18px; }
+.stats4 .stat { padding: 14px; border-radius: 16px; background: var(--panel); }
+.stats4 .stat .v { font-size: 30px; margin: 6px 0 2px; }
+.quick { margin-top: 18px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 18px; align-items: center; padding: 22px; border-radius: 22px; border: 1px solid var(--accent); background: radial-gradient(90% 140% at 0% 0%, rgba(255,61,110,.22), transparent 60%), var(--panel); }
+.qh { font-size: 24px; font-style: italic; font-weight: 900; }
+.quick-form { display: flex; gap: 8px; }
+.quick-form input { flex: 1; min-width: 0; padding: 14px; border-radius: 999px; }
+.vgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+.vitem { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; transition: border-color .2s, transform .2s; }
+.vitem:hover { border-color: var(--accent); transform: translateY(-2px); }
+.vthumb { position: relative; aspect-ratio: 9 / 16; background: #000 center / cover no-repeat; }
+.vthumb video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.vthumb .st { position: absolute; top: 8px; left: 8px; z-index: 2; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 999px; background: rgba(0,0,0,.6); color: #fff; }
+.vthumb .st.done { background: rgba(95,224,160,.9); color: var(--accent-ink); }
+.vthumb .st.failed { background: rgba(255,133,133,.9); color: var(--accent-ink); }
+.vthumb .ph2 { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 32px; background: linear-gradient(170deg, #241219, #0d0609); }
+.vmeta { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 4px; }
+.vmeta b { font-size: 14px; line-height: 1.25; }
+.vmeta small { color: var(--muted); font-size: 12px; }
+.vact { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.vact a, .vact button { flex: 1; text-align: center; justify-content: center; padding: 7px 8px; font-size: 12.5px; }
+.vmeta .feature-row input { max-width: none; }
+.filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.filters button { border: 1px solid var(--line); background: var(--panel); color: var(--muted); border-radius: 999px; padding: 7px 14px; font-weight: 600; font-size: 13.5px; cursor: pointer; }
+.filters button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.perk-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.perk-grid li { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 14px; }
+.perk-grid li::before { content: "✓"; color: var(--ok); font-weight: 800; margin-right: 8px; }
+.bill { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.bill-plan { background: linear-gradient(160deg, #2a1420, var(--panel)); border-color: var(--accent); }
+.acc-panel .chars { gap: 12px; }
+.acc-panel .char-card { width: 120px; }
+.acc-panel .char-card img { width: 120px; height: 180px; }
+@media (max-width: 900px) {
+  .dash { grid-template-columns: minmax(0, 1fr); padding-top: 18px; }
+  .dash-side { position: static; }
+  .dash-nav { flex-direction: row; overflow-x: auto; scrollbar-width: none; }
+  .dash-nav::-webkit-scrollbar { display: none; }
+  .dash-nav button, .dash-nav a { width: auto; flex: none; white-space: nowrap; }
+  .dash-nav .dash-new { margin-top: 0; }
+  .stats4 { grid-template-columns: 1fr 1fr; }
+  .quick { grid-template-columns: 1fr; }
+  .bill { grid-template-columns: 1fr; }
+  .dash-side > .who-card, .dash-side > .credit-box { display: none; }
+  #btnLogout { display: none; }
+}
+@media (max-width: 460px) { .vgrid { grid-template-columns: 1fr 1fr; gap: 8px; } .quick-form { flex-direction: column; } }
+
+/* Fin d'épisode */
+.outro-pick { display: flex; gap: 8px; flex-wrap: wrap; }
+.outro-pick button { border: 1px solid var(--line); background: var(--panel-2); color: var(--ink); border-radius: 999px; padding: 9px 14px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.outro-pick button:hover { border-color: var(--muted); }
+.outro-pick button[aria-pressed="true"] { border-color: var(--accent); background: rgba(255, 61, 110, .15); box-shadow: 0 0 0 2px rgba(255,61,110,.25); }
+.outro-row { margin-top: 2px; }
+#outroPreview b { color: var(--ink); }
+.shot.outro { border-color: var(--accent); background: linear-gradient(160deg, rgba(255,61,110,.12), var(--panel-2)); }
+.shot.outro .ovl { display: inline-block; margin-top: 8px; font-weight: 900; letter-spacing: .04em; text-transform: uppercase; font-size: 13px; background: #fff; color: #1a0509; padding: 4px 10px; border-radius: 6px; }
+
+/* Couverture TikTok */
+.modal { position: fixed; inset: 0; z-index: 60; background: rgba(8, 3, 7, .78); backdrop-filter: blur(6px); display: grid; place-items: center; padding: 16px; overflow-y: auto; }
+.modal-box { width: min(1000px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 26px; padding: 20px; box-shadow: 0 40px 100px rgba(0,0,0,.6); }
+.modal-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+.modal-x { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel-2); color: var(--ink); font-size: 16px; cursor: pointer; flex: none; }
+.cover-grid { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 22px; align-items: start; }
+.cover-prev canvas { width: 100%; height: auto; aspect-ratio: 9 / 16; border-radius: 18px; border: 1px solid var(--line); background: #000; display: block; box-shadow: 0 24px 50px rgba(0,0,0,.5); }
+.cover-ctrl input[type="range"] { width: 100%; accent-color: var(--accent); }
+.cover-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+#coverIdeas button[aria-pressed="true"] { border-color: var(--accent); background: rgba(255,61,110,.15); }
+@media (max-width: 760px) { .cover-grid { grid-template-columns: 1fr; } .cover-prev { max-width: 260px; margin: 0 auto; } .modal { padding: 8px; } .modal-box { padding: 14px; max-height: calc(100vh - 16px); } }
+
+/* Amélioration virale */
+.improve-card { margin-top: 16px; border: 1px solid var(--accent); border-radius: 18px; padding: 16px; background: radial-gradient(90% 140% at 0% 0%, rgba(255,61,110,.18), transparent 60%), var(--panel-2); }
+.improve-card h3 { font-size: 20px; font-style: italic; font-weight: 900; }
+.viral-check { color: var(--ink); font-weight: 600; }
+.viral-box { margin-top: 10px; border: 1px solid rgba(95,224,160,.35); background: rgba(95,224,160,.07); border-radius: 12px; padding: 10px 12px; font-size: 13.5px; }
+.viral-box b { color: var(--ok); }
+.viral-box ul { margin: 6px 0 0; padding-left: 18px; color: var(--ink); }
+
+.wrap { max-width: 1200px; }
+.view:not(#view-accueil) { max-width: 960px; margin-left: auto; margin-right: auto; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } html { scroll-behavior: auto; } .decor:hover img { transform: none; } }
+</style>
+</head>
+<body>
+
+<nav class="nav" aria-label="Navigation">
+  <div class="nav-in">
+    <a class="brand" href="#accueil"><svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="36" r="24" fill="#ff3d6e"/><path d="M32 12c-6 0-10 4-10 4s6 2 10 2 10-2 10-2-4-4-10-4z" fill="#5fe0a0"/><circle cx="24" cy="34" r="2.5" fill="#fff3"/><circle cx="38" cy="42" r="2.5" fill="#fff3"/><circle cx="32" cy="28" r="2" fill="#fff3"/></svg>Drama<b>Fruit</b><span class="beta">Beta</span></a>
+    <div class="nav-links" id="navLinks">
+      <a class="link" href="#studio" data-nav="studio">Studio</a>
+      <a class="link" href="#tarifs" data-nav="tarifs">Tarifs</a>
+      <a class="link" href="#compte" data-nav="compte" id="navAccount">Connexion</a>
+      <a class="credits-pill" href="#compte" id="navCredits" hidden>✦ <span id="navCreditsValue">0</span></a>
+    </div>
+    <button class="burger" id="burger" type="button" aria-label="Menu" aria-expanded="false" aria-controls="navLinks"><span></span><span></span><span></span></button>
+  </div>
+</nav>
+<div class="banner" id="demoBanner" hidden>Aperçu de démonstration : l'interface est réelle, les comptes et la génération vidéo s'activent une fois le site déployé.</div>
+
+<div class="wrap">
+
+<!-- ========== ACCUEIL ========== -->
+<section class="view" id="view-accueil">
+
+  <!-- Héros -->
+  <header class="h-hero">
+    <div>
+      <a class="pill-new" href="#studio"><b>Nouveau</b> Grok Imagine 1.5 : voix synchronisées en 1080p →</a>
+      <h1>Crée des fruit dramas <span class="grad">viraux</span> en 3 minutes.</h1>
+      <p class="lede">Une phrase d'idée suffit. L'IA écrit le scénario, tourne la vidéo verticale, ajoute les voix, le son et la légende. Tu n'as plus qu'à poster.</p>
+      <div class="cta-row">
+        <a class="btn big" href="#studio">Créer ma première vidéo</a>
+        <a class="btn secondary big" href="#exemples">Voir les exemples</a>
+      </div>
+      <div class="creators">
+        <div class="faces" aria-hidden="true"><span>🍓</span><span>🍌</span><span>🍇</span><span>🍋</span><span>🍑</span></div>
+        <div><b>Premiers épisodes offerts</b><br>40 crédits, sans carte bancaire</div>
+      </div>
+    </div>
+    <div class="stage3" aria-label="Aperçu d'épisodes">
+      <div class="phone side l"><div class="scr"><video data-auto src="media/clips/c15.mp4" poster="media/clips/c15.jpg" muted loop playsinline preload="none"></video></div></div>
+      <div class="phone side r"><div class="scr"><video data-auto src="media/clips/c25.mp4" poster="media/clips/c25.jpg" muted loop playsinline preload="none"></video></div></div>
+      <div class="phone main"><div class="scr">
+        <video data-auto src="media/clips/hero.mp4" poster="media/clips/c1.jpg" muted loop playsinline autoplay preload="auto"></video>
+        <div class="tt-ui" aria-hidden="true"><div><i>♥</i>Like</div><div><i>💬</i>Avis</div><div><i>↗</i>Partage</div></div>
+        <div class="tt-cap"><b>@dramafruit</b>Minuit ou prison : Raisin perd tout 🍇💎 #fruitdrama</div>
+      </div></div>
+      <div class="floaty a"><span class="ic">✍️</span><span>Scénario écrit<small>en quelques secondes</small></span></div>
+      <div class="floaty b"><span class="ic">🔊</span><span>Voix + sous-titres<small>6 langues</small></span></div>
+      <div class="floaty c"><span class="ic">📱</span><span>Jusqu'à 60 s<small>9:16 · 1080p, prêt pour TikTok</small></span></div>
+    </div>
+  </header>
+  <div class="models-strip"><span class="lbl">Les meilleurs modèles vidéo, au même endroit</span><span>Grok Imagine</span><span>Veo 3.1</span><span>Kling 3.0</span><span>Seedance 2.5</span><span>Gemini Omni</span></div>
+
+  <!-- Mur de vidéos -->
+  <section class="marquee-sec home-bleed reveal" id="exemples">
+    <div class="center-head">
+      <span class="kicker">Exemples</span>
+      <h2>Des épisodes qui accrochent <span class="grad">dès la première seconde</span></h2>
+      <p class="sub">5 épisodes, 26 extraits, tous générés par Drama Fruit : décors, personnages, voix, sous-titres. Aucun montage à la main. Passe la souris pour mettre en pause, clique pour regarder l'épisode.</p>
+    </div>
+    <div class="marquee"><div class="track" id="trackA"></div></div>
+    <div class="marquee rev"><div class="track" id="trackB"></div></div>
+  </section>
+
+  <!-- Modes de création -->
+  <section class="section reveal" style="margin-top:72px">
+    <div class="center-head">
+      <span class="kicker">Créer</span>
+      <h2>Plusieurs façons de créer. <span class="grad">Choisis la tienne.</span></h2>
+    </div>
+    <div class="modes">
+      <article class="mode reveal">
+        <div class="mode-media"><div class="vcard tilt-l" data-clip="11"></div><div class="vcard tilt-r" data-clip="16"></div></div>
+        <div>
+          <span class="badge-n hot">Le plus rapide</span>
+          <h3>Express : une phrase, un épisode</h3>
+          <p class="d">Écris ton idée comme tu la raconterais à un pote. Le réalisateur IA choisit le casting, le décor et le découpage, puis lance le tournage.</p>
+          <ul><li>Vidéo prête en 1 à 3 minutes</li><li>Fin au choix : like pour la partie 2, abonne-toi, vote…</li><li>Légende et hashtags inclus</li></ul>
+          <div class="cta-row"><a class="btn" href="#studio">Essayer Express</a></div>
+        </div>
+      </article>
+      <article class="mode reveal">
+        <div class="mode-media"><div class="mock-wrap">
+          <div class="mock" aria-hidden="true">
+            <div class="kv" style="margin-bottom:6px"><b>Plan 1 · 4 s</b> · Salle du palais, lustres, gros plan</div>
+            <div class="ln"><b>Citron</b><span>« Madame, ne bougez pas. »</span></div>
+            <div class="ln"><b>Raisin</b><span>« Vol de diamant ? Moi ? »</span></div>
+            <div class="ln"><b>Fraise</b><span>« Regardez-moi bien. Elle va tout payer. »</span></div>
+          </div>
+          <div class="vcard" data-clip="2" style="width:150px"></div>
+        </div></div>
+        <div>
+          <span class="badge-n">Contrôle total</span>
+          <h3>Réalisateur : relis avant de tourner</h3>
+          <p class="d">Le scénario s'affiche plan par plan. Corrige une réplique, change le ton, demande une autre version. Le tournage ne part que quand tu valides.</p>
+          <ul><li>Répliques modifiables une à une</li><li>Réécriture du scénario gratuite</li><li>Épisodes jusqu'à 60 s, 12 plans montés</li></ul>
+          <div class="cta-row"><a class="btn" href="#studio">Ouvrir le studio</a></div>
+        </div>
+      </article>
+      <article class="mode reveal">
+        <div class="mode-media"><div class="vcard tilt-l" data-clip="23"></div><div class="vcard tilt-r" data-clip="26"></div></div>
+        <div>
+          <span class="badge-n">Pro et Studio</span>
+          <h3>Série : les mêmes têtes, épisode après épisode</h3>
+          <p class="d">Enregistre tes personnages une fois. Ils gardent la même tête, la même tenue et le même style d'un épisode à l'autre. Ta chaîne devient une vraie série.</p>
+          <ul><li>Jusqu'à 20 personnages enregistrés</li><li>Image de départ pour fixer le décor</li><li>Parfait pour les « partie 2 »</li></ul>
+          <div class="cta-row"><a class="btn" href="#tarifs">Voir les formules</a></div>
+        </div>
+      </article>
+      <article class="mode reveal">
+        <div class="mode-media"><div class="mock-wrap">
+          <div class="vcard" data-clip="20" style="width:150px"></div>
+          <div class="mock" aria-hidden="true">
+            <div class="bubble me">Plus de tension, et termine sur Fraise qui regarde la caméra.</div>
+            <div class="bubble"><span class="typing"><i></i><i></i><i></i></span>&nbsp; Le réalisateur réécrit la fin…</div>
+          </div>
+        </div></div>
+        <div>
+          <span class="badge-n">Révisions</span>
+          <h3>Boost viral : l'IA améliore ton épisode</h3>
+          <p class="d">Pas convaincu ? Dis ce qui ne va pas avec tes mots. Le réalisateur applique tes remarques et retourne une nouvelle version.</p>
+          <ul><li>Accroche, rebondissement et cliffhanger réécrits pour la viralité</li><li>5 crédits l'amélioration, tes remarques incluses</li><li>Crédits rendus si le tournage échoue</li></ul>
+          <div class="cta-row"><a class="btn" href="#studio">Lancer une idée</a></div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- Thèmes -->
+  <section class="section reveal" style="margin-top:72px">
+    <div class="center-head">
+      <span class="kicker">Thèmes</span>
+      <h2>Surfe sur les histoires <span class="grad">qui font des vues</span></h2>
+      <p class="sub">Héritage, trahison, compétition, romance : les intrigues qui marchent sur TikTok, jouées par des fruits.</p>
+    </div>
+    <div class="themes">
+      <button type="button" class="theme" data-play-ep="3"><video data-auto src="media/clips/c16.mp4" poster="media/clips/c16.jpg" muted loop playsinline preload="none"></video><span class="tl"><span class="tn">💰 Héritage et millions</span><span class="tx">« 500 000 000 € »</span></span></button>
+      <button type="button" class="theme" data-play-ep="2"><video data-auto src="media/clips/c12.mp4" poster="media/clips/c12.jpg" muted loop playsinline preload="none"></video><span class="tl"><span class="tn">💃 Compétition</span><span class="tx">« Lâche Yanis »</span></span></button>
+      <button type="button" class="theme" data-play-ep="4"><video data-auto src="media/clips/c20.mp4" poster="media/clips/c20.jpg" muted loop playsinline preload="none"></video><span class="tl"><span class="tn">💘 Romance</span><span class="tx">« Change by midnight »</span></span></button>
+      <button type="button" class="theme" data-play-ep="5"><video data-auto src="media/clips/c24.mp4" poster="media/clips/c24.jpg" muted loop playsinline preload="none"></video><span class="tl"><span class="tn">👨‍🍳 Rivalités en cuisine</span><span class="tx">« Chef exécutif »</span></span></button>
+      <button type="button" class="theme" data-play-ep="1"><video data-auto src="media/clips/c3.mp4" poster="media/clips/c3.jpg" muted loop playsinline preload="none"></video><span class="tl"><span class="tn">🚔 Arrestation</span><span class="tx">« L'acte est notarié »</span></span></button>
+    </div>
+  </section>
+
+  <!-- Tout est inclus -->
+  <section class="section reveal" style="margin-top:72px">
+    <div class="center-head">
+      <span class="kicker">Tout compris</span>
+      <h2>Tout ce qu'il faut pour <span class="grad">faire des vues</span></h2>
+    </div>
+    <div class="feat-grid">
+      <div class="feat"><div class="em">✍️</div><h3>Scénario IA</h3><p>Accroche, rebondissement et cliffhanger écrits pour retenir jusqu'à la fin.</p></div>
+      <div class="feat"><div class="em">🎭</div><h3>Personnages fruits</h3><p>Casting automatique ou tes propres têtes d'affiche, toujours reconnaissables.</p></div>
+      <div class="feat"><div class="em">🔊</div><h3>Voix et son</h3><p>Dialogues doublés, ambiance sonore et musique générés avec l'image.</p></div>
+      <div class="feat"><div class="em">💬</div><h3>Sous-titres</h3><p>Gros sous-titres lisibles sur mobile, en 6 langues.</p></div>
+      <div class="feat"><div class="em">📱</div><h3>Jusqu'à 60 secondes</h3><p>Vertical 9:16 jusqu'en 1080p, des épisodes assez longs pour un vrai rebondissement.</p></div>
+      <div class="feat"><div class="em">🎬</div><h3>Six décors prêts</h3><p>Cuisine noire, villa, frigo n°7, marché de nuit… ou laisse l'IA choisir.</p></div>
+      <div class="feat"><div class="em">🔁</div><h3>Fin qui fait réagir</h3><p>« Like pour la partie 2 », « abonne-toi », « team ou team ? » : tu choisis la dernière scène.</p></div>
+      <div class="feat"><div class="em">🖼️</div><h3>Couverture qui fait cliquer</h3><p>Choisis le moment le plus choquant, une accroche, un style : ta miniature TikTok est prête.</p></div>
+    </div>
+  </section>
+
+  <section class="section reveal" id="decorSection" hidden>
+    <div class="center-head"><span class="kicker">Les décors</span><h2>Six plateaux, <span class="grad">tous prêts à tourner</span></h2><p class="sub">Chaque décor a sa lumière et son ambiance. Choisis-le dans le studio, ou laisse le réalisateur décider selon l'histoire.</p></div>
+    <div class="decors" id="decorGallery"></div>
+  </section>
+
+  <!-- Avant / avec -->
+  <section class="section reveal" style="margin-top:72px">
+    <div class="center-head">
+      <span class="kicker">Pourquoi Drama Fruit</span>
+      <h2>Les galères des autres outils, <span class="grad">tu les connais déjà</span></h2>
+    </div>
+    <div class="versus">
+      <div class="vs bad-side"><h3>Avant</h3><ul>
+        <li>Un outil pour le script, un autre pour l'image, un troisième pour la voix</li>
+        <li>Des personnages qui changent de tête à chaque plan</li>
+        <li>Des heures de montage pour 15 secondes</li>
+        <li>Des abonnements qui s'empilent</li>
+      </ul></div>
+      <div class="vs good-side"><h3>Avec Drama Fruit</h3><ul>
+        <li>Scénario, vidéo, voix et sous-titres au même endroit</li>
+        <li>Personnages enregistrés, identiques d'un épisode à l'autre</li>
+        <li>Une vidéo prête à poster en 3 minutes</li>
+        <li>Un seul abonnement, crédits non utilisés reportés</li>
+      </ul></div>
+    </div>
+  </section>
+
+  <!-- Épisodes complets -->
+  <section class="section reveal" id="episodes" style="margin-top:72px">
+    <div class="center-head"><span class="kicker">À regarder avec le son</span><h2>Les épisodes en entier, <span class="grad">du début au cliffhanger</span></h2></div>
+    <div class="full-ep">
+      <div class="phone"><div class="scr" style="aspect-ratio:9/16"><video id="epVideo" src="media/episode-1.mp4" poster="media/episode-1.jpg" controls playsinline preload="none"></video></div></div>
+      <div>
+        <p class="eyebrow" id="epNum" style="margin:0 0 6px">Épisode 1 sur 5</p>
+        <h3 id="epTitle">« L'acte est notarié »</h3>
+        <p class="sub" id="epPitch" style="font-size:16px"></p>
+        <div class="ep-list" id="epList" role="list"></div>
+        <div class="cta-row"><a class="btn" href="#studio">Faire le mien</a><button class="btn secondary" id="epCover" type="button">🖼️ Créer sa couverture</button><a class="btn ghost" id="profileLink" href="https://www.tiktok.com/@fruitanime09" target="_blank" rel="noopener">Voir la chaîne TikTok →</a></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Épisodes de la chaîne (mis en avant + TikTok) -->
+  <section class="section reveal" style="margin-top:72px">
+    <div class="center-head"><span class="kicker">Sur la chaîne</span><h2>Les derniers épisodes</h2></div>
+    <div class="reel-wrap">
+      <div class="reel" id="reel" aria-label="Épisodes générés"></div>
+    </div>
+    <p class="reel-note" id="reelNote"></p>
+  </section>
+
+  <section class="section reveal" id="home-pricing" style="margin-top:72px">
+    <div class="center-head"><span class="kicker">Formules</span><h2>Plus tu montes, <span class="grad">plus tu tournes</span></h2><p class="sub">Chaque formule débloque plus de crédits, plus de durée, plus de plans montés, plus de modèles. Les crédits non utilisés sont reportés.</p></div>
+    <div class="plans" id="homePlans"></div>
+  </section>
+
+  <section class="section reveal" style="margin-top:72px;max-width:820px;margin-left:auto;margin-right:auto">
+    <div class="center-head"><span class="kicker">Questions</span><h2>Avant de te lancer</h2></div>
+    <details><summary>Je peux essayer gratuitement ?</summary><div class="inner">Oui. À l'inscription tu reçois 40 crédits, de quoi tourner tes deux premiers épisodes de 15 secondes. Aucune carte bancaire n'est demandée.</div></details>
+    <details><summary>Faut-il savoir monter une vidéo ?</summary><div class="inner">Non. Le scénario, le découpage, les voix, le son et les sous-titres sont générés ensemble. Tu télécharges une vidéo prête à poster.</div></details>
+    <details><summary>Qu'est-ce qu'un crédit ?</summary><div class="inner">Un crédit paie la génération vidéo. Le coût dépend du modèle et de la durée : de 1 à 4 crédits par seconde, et la HD 1080p coûte 1,5 fois plus. Une vidéo de 8 secondes avec Grok Imagine Lite coûte 8 crédits, un épisode de 60 secondes avec Grok Imagine 1.5 en coûte 120. Si la génération échoue, les crédits te sont rendus.</div></details>
+    <details><summary>Mes personnages gardent-ils la même tête ?</summary><div class="inner">Avec les formules Pro et Studio, tu enregistres tes personnages et ils restent identiques d'un épisode à l'autre. C'est ce qui permet de faire de vraies séries.</div></details>
+    <details><summary>Combien de temps prend une vidéo ?</summary><div class="inner">Le scénario s'écrit en quelques secondes. Un épisode court se tourne en 1 à 3 minutes ; un épisode de 60 s, monté en plusieurs séquences, demande quelques minutes de plus.</div></details>
+    <details><summary>Quels formats et quelles langues ?</summary><div class="inner">Vidéo verticale 9:16, jusqu'en 1080p. Les répliques peuvent être en français, anglais, espagnol, allemand, italien ou portugais.</div></details>
+    <details><summary>L'amélioration IA, ça coûte combien ?</summary><div class="inner">5 crédits. L'IA réécrit ton scénario pour le rendre plus viral : accroche dès la première seconde, rebondissement, cliffhanger, et tes remarques si tu en as. Tu peux l'activer dès la création ou après avoir vu l'épisode. Retourner la version améliorée coûte ensuite le prix normal de la vidéo.</div></details>
+    <details><summary>À qui appartiennent les vidéos ?</summary><div class="inner">À toi. Télécharge-les et publie-les où tu veux. Les formules payantes les gardent dans ta vidéothèque ; la formule gratuite te donne un lien valable 48 h.</div></details>
+    <details><summary>Je peux résilier quand je veux ?</summary><div class="inner">Oui, depuis ton compte, en un clic. Tu gardes tes crédits jusqu'à la fin de la période payée.</div></details>
+  </section>
+
+  <div class="final video-final reveal">
+    <div class="bgwall" id="finalWall" aria-hidden="true"></div>
+    <div class="fg">
+      <h2>Ta prochaine vidéo virale est <span class="grad">à 3 minutes.</span></h2>
+      <p>40 crédits à l'inscription, pas de carte bancaire. Le cliffhanger, c'est toi qui l'écris.</p>
+      <div class="cta-row" style="justify-content:center"><a class="btn big" href="#studio">Créer ma vidéo</a></div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== STUDIO ========== -->
+<section class="view" id="view-studio" hidden>
+  <header class="hero" style="padding-bottom:8px;grid-template-columns:1fr">
+    <div>
+      <p class="eyebrow">Studio</p>
+      <h1 style="font-size:clamp(36px,8vw,60px)">Raconte, <em>l'IA tourne.</em></h1>
+    </div>
+  </header>
+
+  <div class="card" id="studioForm">
+    <label class="field" for="idea">L'idée de l'épisode</label>
+    <textarea id="idea" maxlength="800" placeholder="Ex. : Dans la villa, l'ex de Banane débarque pendant la cérémonie. Fraise explose, Citron filme tout."></textarea>
+    <div class="chips" id="ideaChips"></div>
+
+    <label class="field" id="l-decor">Décor</label>
+    <div class="decor-pick" id="decorPick" role="group" aria-labelledby="l-decor"></div>
+
+    <label class="field" id="l-outro">Fin de l'épisode <small>(la dernière scène qui pousse à réagir)</small></label>
+    <div class="outro-pick" id="outroPick" role="group" aria-labelledby="l-outro"></div>
+    <div class="row outro-row">
+      <div id="outroCustomWrap" hidden><label class="field" for="outroCustom">Ta phrase de fin</label><input type="text" id="outroCustom" maxlength="120" placeholder="Ex. : Si on atteint 10 000 likes, Fraise se venge."></div>
+      <div><label class="field" for="outroFormat">Comment elle apparaît</label>
+        <select id="outroFormat"><option value="both">Dite face caméra + texte à l'écran</option><option value="face">Dite face caméra par un personnage</option><option value="text">Texte à l'écran seulement</option></select></div>
+    </div>
+    <p class="note" id="outroPreview"></p>
+
+    <div class="row">
+      <div>
+        <label class="field" for="model">Modèle vidéo</label>
+        <select id="model"></select>
+        <p class="note" id="modelNote"></p>
+      </div>
+      <div>
+        <label class="field" for="duration">Durée</label>
+        <select id="duration"></select>
+        <p class="note" id="durationNote"></p>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label class="field" for="lang">Langue des répliques</label>
+        <select id="lang">
+          <option value="fr">Français</option><option value="en">Anglais</option><option value="es">Espagnol</option><option value="de">Allemand</option><option value="it">Italien</option><option value="pt">Portugais</option>
+        </select>
+      </div>
+      <div>
+        <label class="field">Options</label>
+        <label class="check" id="hdWrap"><input type="checkbox" id="hd"> HD 1080p <span class="lock" id="hdLock" hidden>Pro</span></label>
+        <label class="check"><input type="checkbox" id="review"> Me montrer le scénario avant de tourner</label>
+        <label class="check viral-check"><input type="checkbox" id="viral"> ✨ Booster viral par l'IA <span class="lock" id="viralCostTag">+5 crédits</span></label>
+      </div>
+    </div>
+
+    <label class="field" for="character">Personnage de départ <small>(facultatif : même tête d'un épisode à l'autre)</small> <span class="lock" id="charLock" hidden>Pro</span></label>
+    <div class="imgpick">
+      <select id="character" style="max-width:260px"><option value="">Aucun</option></select>
+      <input type="file" id="image" accept="image/jpeg,image/png,image/webp">
+      <img id="imagePreview" alt="" hidden>
+      <button class="btn secondary small" id="btnImageClear" type="button" hidden>Retirer</button>
+    </div>
+
+    <div class="actions">
+      <button class="btn" id="btnCreate" type="button">Créer l'épisode</button>
+      <span class="cost" id="costPill"></span>
+    </div>
+    <div class="alert bad" id="studioError" hidden></div>
+    <div class="alert warn" id="studioInfo" hidden></div>
+  </div>
+
+  <div class="card" id="studioRun" hidden style="margin-top:14px">
+    <div class="stages">
+      <div class="stage" id="st1"><i>1</i><span>Écriture du scénario</span></div>
+      <div class="stage" id="st2"><i>2</i><span>Tournage et montage</span></div>
+      <div class="stage" id="st3"><i>3</i><span>Épisode prêt</span></div>
+    </div>
+    <div class="progress" id="progress" hidden><i id="progressBar"></i></div>
+    <p class="note" id="runStatus"></p>
+
+    <div id="planBox" hidden>
+      <div class="plan-title" id="planTitle"></div>
+      <div class="plan-logline" id="planLogline"></div>
+      <div class="viral-box" id="viralBox" hidden></div>
+      <div class="cast-row" id="planCast"></div>
+      <div class="shots" id="planShots"></div>
+      <div class="actions" id="reviewActions" hidden>
+        <button class="btn" id="btnShoot" type="button">Tourner cet épisode</button>
+        <button class="btn secondary" id="btnRewrite" type="button">✨ Améliorer avec l'IA (5 crédits)</button>
+      </div>
+    </div>
+
+    <div class="result" id="resultBox" hidden>
+      <div class="screen" id="screen"><div class="idle" id="screenIdle"><span class="big spin">🎬</span><span id="screenText">Ta vidéo s'affichera ici.</span></div></div>
+      <div class="side">
+        <div class="kv" id="resultMeta"></div>
+        <div class="actions" style="margin-top:0">
+          <a class="btn small" id="btnOpen" href="#" target="_blank" rel="noopener">Ouvrir / télécharger</a>
+          <button class="btn secondary small" id="btnCopyCaption" type="button">Copier la légende</button>
+          <button class="btn secondary small" id="btnCover" type="button">🖼️ Couverture TikTok</button>
+        </div>
+        <div class="caption-box" id="captionBox"></div>
+        <p class="note" id="expiryNote" hidden>Lien valable 48 h sur la formule Découverte : télécharge la vidéo maintenant.</p>
+      </div>
+    </div>
+
+    <div id="feedbackBox" hidden>
+      <div class="improve-card">
+        <h3>✨ Rendre l'épisode plus viral</h3>
+        <p class="note" style="margin-top:4px">L'IA réécrit le scénario pour accrocher dès la première seconde, monter la tension et finir sur un cliffhanger. Ajoute tes remarques si tu veux.</p>
+        <label class="field" for="feedback">Tes remarques <small>(facultatif)</small></label>
+        <textarea id="feedback" maxlength="600" placeholder="Ex. : Banane doit paraître coupable, plus de tension, et termine sur Fraise qui regarde la caméra."></textarea>
+        <div class="actions">
+          <button class="btn" id="btnImprove" type="button">✨ Améliorer avec l'IA (5 crédits)</button>
+          <button class="btn secondary" id="btnNew" type="button">Nouvelle idée</button>
+        </div>
+        <p class="note" style="margin-top:10px">Sans amélioration, l'épisode reste tel quel : lance une nouvelle idée pour en créer un autre. Le nouveau tournage de la version améliorée coûte <span class="cost" id="costPill2"></span>.</p>
+      </div>
+      <p class="note" id="revisionNote"></p>
+    </div>
+    <div class="alert bad" id="runError" hidden></div>
+  </div>
+
+  <section class="section" id="recentBox" hidden>
+    <div class="section-head"><span class="kicker">Derniers épisodes</span><h2 style="font-size:22px">Sur ce compte</h2></div>
+    <ul class="list" id="recentList"></ul>
+    <p class="note"><a href="#compte">Toute la vidéothèque →</a></p>
+  </section>
+</section>
+
+<!-- ========== TARIFS ========== -->
+<section class="view" id="view-tarifs" hidden>
+  <header class="hero" style="padding-bottom:8px;grid-template-columns:1fr">
+    <div>
+      <p class="eyebrow">Formules et crédits</p>
+      <h1 style="font-size:clamp(36px,8vw,60px)">Plus tu montes, <em>plus tu tournes.</em></h1>
+      <p class="lede">Un abonnement mensuel donne des crédits chaque mois et débloque des avantages. Les packs ajoutent des crédits à tout moment.</p>
+    </div>
+  </header>
+  <div class="plans" id="pricingPlans"></div>
+  <div class="alert warn" id="pricingInfo" hidden></div>
+  <section class="section">
+    <div class="section-head"><span class="kicker">Packs</span><h2 style="font-size:22px">Des crédits en plus, sans attendre le mois prochain</h2></div>
+    <div class="packs" id="packs"></div>
+    <p class="note">Coût par seconde de vidéo : <span id="modelCostsNote"></span>. HD 1080p : ×1,5.</p>
+  </section>
+</section>
+
+<!-- ========== COMPTE ========== -->
+<section class="view" id="view-compte" hidden>
+  <div class="dash">
+    <aside class="dash-side">
+      <div class="who-card">
+        <div class="avatar" id="acAvatar" aria-hidden="true">🍓</div>
+        <div style="min-width:0"><div class="who-name" id="acName">Mon compte</div><div class="who-mail" id="acEmail"></div></div>
+      </div>
+      <div class="credit-box">
+        <div class="cb-top"><span>Crédits</span><span class="plan-chip" id="acPlanChip">–</span></div>
+        <div class="cb-val"><span id="acCredits">–</span><small id="acCreditsOf"></small></div>
+        <div class="meter"><i id="acMeter"></i></div>
+        <a class="btn small block" href="#tarifs" style="margin-top:12px">＋ Recharger</a>
+      </div>
+      <nav class="dash-nav" aria-label="Espace compte">
+        <button type="button" data-acc-tab="overview" aria-current="true"><span>🏠</span>Tableau de bord</button>
+        <button type="button" data-acc-tab="videos"><span>🎬</span>Mes vidéos <b class="count" id="acCountNav">0</b></button>
+        <button type="button" data-acc-tab="characters"><span>🎭</span>Personnages</button>
+        <button type="button" data-acc-tab="billing"><span>💳</span>Abonnement</button>
+        <button type="button" data-acc-tab="settings"><span>⚙️</span>Paramètres</button>
+        <a href="#studio" class="dash-new"><span>✨</span>Nouvel épisode</a>
+      </nav>
+      <button class="btn ghost small" id="btnLogout" type="button" style="margin-top:6px">Se déconnecter</button>
+    </aside>
+
+    <div class="dash-main">
+      <div class="alert ok" id="accountFlash" hidden></div>
+      <div class="alert warn" id="demoAccNote" hidden>Compte de démonstration : les données sont des exemples. Les vrais comptes s'activent une fois le site déployé.</div>
+
+      <!-- Tableau de bord -->
+      <section class="acc-panel" data-panel="overview">
+        <p class="eyebrow" style="margin:0 0 6px" id="acDate"></p>
+        <h1 class="dash-title" id="accountTitle">Bonjour.</h1>
+        <div class="stats4">
+          <div class="stat"><div class="l">Crédits disponibles</div><div class="v mango" id="acCredits2">–</div><div class="l" id="acCreditsHint">≈ 0 épisode de 8 s</div></div>
+          <div class="stat"><div class="l">Formule</div><div class="v" id="acPlan">–</div><div class="l" id="acPlanSub">formule</div></div>
+          <div class="stat"><div class="l">Épisodes générés</div><div class="v" id="acCount">–</div><div class="l" id="acSeconds">0 s de vidéo</div></div>
+          <div class="stat"><div class="l">Personnages</div><div class="v" id="acChars">–</div><div class="l" id="acCharsSub">enregistrés</div></div>
+        </div>
+
+        <div class="quick">
+          <div>
+            <h2 class="qh">Ton prochain épisode commence ici</h2>
+            <p class="sub">Une phrase suffit. Tu pourras choisir le décor et le modèle dans le studio.</p>
+          </div>
+          <form class="quick-form" id="quickForm">
+            <input type="text" id="quickIdea" maxlength="300" placeholder="Ex. : Banane découvre que Fraise a hérité de tout…" aria-label="Idée d'épisode">
+            <button class="btn" type="submit">Créer →</button>
+          </form>
+        </div>
+
+        <div class="section-head" style="margin-top:28px"><h2 style="font-size:22px">Dernières vidéos</h2><button type="button" class="btn ghost small" data-acc-tab="videos">Tout voir →</button></div>
+        <div class="vgrid" id="acRecent"></div>
+        <p class="empty" id="acRecentEmpty" hidden>Aucun épisode pour l'instant. <a href="#studio">Lance le premier →</a></p>
+
+        <div class="section-head" style="margin-top:28px"><h2 style="font-size:22px">Inclus dans ta formule</h2></div>
+        <ul class="perk-grid" id="acPerks"></ul>
+      </section>
+
+      <!-- Mes vidéos -->
+      <section class="acc-panel" data-panel="videos" hidden>
+        <div class="panel-head"><h1 class="dash-title">Mes vidéos</h1><a class="btn small" href="#studio">✨ Nouvel épisode</a></div>
+        <div class="filters" id="libFilters" role="group" aria-label="Filtrer">
+          <button type="button" data-lib-filter="all" aria-pressed="true">Toutes</button>
+          <button type="button" data-lib-filter="done" aria-pressed="false">Prêtes</button>
+          <button type="button" data-lib-filter="running" aria-pressed="false">En cours</button>
+          <button type="button" data-lib-filter="failed" aria-pressed="false">Échecs</button>
+        </div>
+        <div class="vgrid" id="libraryList"></div>
+        <p class="empty" id="libraryEmpty" hidden>Aucun épisode pour l'instant. <a href="#studio">Lance le premier →</a></p>
+      </section>
+
+      <!-- Personnages -->
+      <section class="acc-panel" data-panel="characters" id="charactersBox" hidden>
+        <div class="panel-head"><h1 class="dash-title">Tes têtes d'affiche</h1></div>
+        <p class="sub" id="charactersSub"></p>
+        <div class="chars" id="charactersList"></div>
+        <div class="card" style="margin-top:16px" id="characterAddCard">
+          <h3>Ajouter un personnage</h3>
+          <div class="row" id="characterAdd" hidden>
+            <div><label class="field" for="charName">Nom</label><input type="text" id="charName" maxlength="40" placeholder="Fraise"></div>
+            <div><label class="field" for="charImage">Image (JPEG/PNG)</label><input type="file" id="charImage" accept="image/jpeg,image/png,image/webp"></div>
+          </div>
+          <div class="actions" id="characterAddActions" hidden><button class="btn secondary small" id="btnCharAdd" type="button">Enregistrer le personnage</button></div>
+          <p class="note" id="charUpsell" hidden>Les personnages enregistrés arrivent avec les formules Pro et Studio. <a href="#tarifs">Voir les formules →</a></p>
+          <div class="alert bad" id="charError" hidden></div>
+        </div>
+      </section>
+
+      <!-- Abonnement -->
+      <section class="acc-panel" data-panel="billing" hidden>
+        <div class="panel-head"><h1 class="dash-title">Abonnement et crédits</h1></div>
+        <div class="bill">
+          <div class="card bill-plan">
+            <span class="plan-chip" id="acPlanChip2">–</span>
+            <div class="price" id="acPlanPrice" style="margin-top:10px">–</div>
+            <p class="note" id="acRenew"></p>
+            <div class="actions">
+              <a class="btn" href="#tarifs">Changer de formule</a>
+              <button class="btn secondary" id="btnPortal" type="button">Gérer l'abonnement</button>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Utilisation des crédits</h3>
+            <div class="cb-val" style="margin-top:8px"><span id="acCredits3">–</span><small id="acCreditsOf2"></small></div>
+            <div class="meter"><i id="acMeter2"></i></div>
+            <p class="note">Les crédits non utilisés sont reportés au mois suivant. Si une génération échoue, ses crédits te sont rendus.</p>
+          </div>
+        </div>
+        <div class="section-head" style="margin-top:24px"><h2 style="font-size:22px">Packs de crédits</h2></div>
+        <div class="packs" id="acPacks"></div>
+      </section>
+
+      <!-- Paramètres -->
+      <section class="acc-panel" data-panel="settings" hidden>
+        <div class="panel-head"><h1 class="dash-title">Paramètres</h1></div>
+        <div class="card">
+          <div class="row">
+            <div><label class="field" for="prefLang">Langue des répliques par défaut</label>
+              <select id="prefLang"><option value="fr">Français</option><option value="en">Anglais</option><option value="es">Espagnol</option><option value="de">Allemand</option><option value="it">Italien</option><option value="pt">Portugais</option></select></div>
+            <div><label class="field" for="prefDuration">Durée par défaut</label>
+              <select id="prefDuration"><option value="6">6 s</option><option value="8">8 s</option><option value="10">10 s</option><option value="15">15 s</option><option value="30">30 s</option><option value="45">45 s</option><option value="60">60 s</option></select></div>
+          </div>
+          <label class="field" for="prefOutro">Fin d'épisode par défaut</label>
+          <select id="prefOutro"></select>
+          <label class="check" style="margin-top:12px"><input type="checkbox" id="prefReview"> Toujours me montrer le scénario avant de tourner</label>
+          <div class="actions"><button class="btn small" id="btnPrefs" type="button">Enregistrer</button></div>
+        </div>
+        <div class="card" style="margin-top:12px">
+          <h3>Connexion</h3>
+          <p class="note" id="acEmail2"></p>
+          <div class="actions"><button class="btn secondary small" id="btnResetPw" type="button">Changer le mot de passe</button><button class="btn ghost small" data-logout type="button">Se déconnecter</button></div>
+        </div>
+
+        <section class="section" id="visualsBox" hidden>
+          <div class="section-head"><span class="kicker">Administration</span><h2 style="font-size:22px">Visuels du site</h2></div>
+          <p class="sub">Génère les images photoréalistes des six décors avec Grok Imagine (environ six images, quelques centimes chacune). Elles s'affichent sur l'accueil et dans le choix du décor du studio.</p>
+          <div class="actions"><button class="btn" id="btnVisuals" type="button">Générer les visuels des décors</button></div>
+          <div class="alert warn" id="visualsInfo" hidden></div>
+          <div class="decors" id="visualsList"></div>
+        </section>
+      </section>
+    </div>
+  </div>
+</section>
+
+<!-- ========== CONNEXION ========== -->
+<section class="view" id="view-connexion" hidden>
+  <div class="auth card">
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" id="tabLogin" aria-selected="true">Connexion</button>
+      <button type="button" role="tab" id="tabSignup" aria-selected="false">Créer un compte</button>
+    </div>
+    <p class="sub" id="authSub">Retrouve tes crédits et ta vidéothèque.</p>
+    <p class="note" id="authDemoNote" hidden>Aperçu : entre n'importe quel e-mail et un mot de passe de 8 caractères pour ouvrir un compte de démonstration.</p>
+    <form id="authForm" novalidate>
+      <label class="field" for="authEmail">E-mail</label>
+      <input type="email" id="authEmail" autocomplete="email" required>
+      <label class="field" for="authPassword">Mot de passe <small>(8 caractères minimum)</small></label>
+      <input type="password" id="authPassword" autocomplete="current-password" minlength="8" required>
+      <div class="actions">
+        <button class="btn block" id="btnAuth" type="submit">Se connecter</button>
+      </div>
+      <div class="actions" style="margin-top:8px;justify-content:space-between">
+        <button class="btn ghost small" id="btnForgot" type="button">Mot de passe oublié</button>
+      </div>
+    </form>
+    <div id="googleWrap" hidden>
+      <p class="or">ou</p>
+      <button class="btn secondary block" id="btnGoogle" type="button">Continuer avec Google</button>
+    </div>
+    <div class="alert bad" id="authError" hidden></div>
+    <div class="alert ok" id="authOk" hidden></div>
+  </div>
+</section>
+
+<footer>
+  <span>© Drama Fruit</span>
+  <a href="#tarifs">Tarifs</a>
+  <a href="#compte">Compte</a>
+  <span id="footSupport"></span>
+</footer>
+</div>
+
+
+<!-- ========== COUVERTURE TIKTOK ========== -->
+<div class="modal" id="coverModal" hidden role="dialog" aria-modal="true" aria-labelledby="coverTitle">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div><span class="kicker">Couverture TikTok</span><h2 id="coverTitle" style="font-size:24px">Une miniature qui donne envie de cliquer</h2></div>
+      <button class="modal-x" id="coverClose" type="button" aria-label="Fermer">✕</button>
+    </div>
+    <div class="cover-grid">
+      <div class="cover-prev"><canvas id="coverCanvas" width="1080" height="1920" aria-label="Aperçu de la couverture"></canvas></div>
+      <div class="cover-ctrl">
+        <label class="field" for="coverTime" style="margin-top:0">Image de fond <small>(glisse pour choisir le moment le plus choquant)</small></label>
+        <input type="range" id="coverTime" min="0" max="10" step="0.1" value="0">
+        <div class="cover-row"><button class="btn secondary small" id="coverShuffle" type="button">🎲 Moment au hasard</button><label class="btn secondary small" style="cursor:pointer">📁 Mon image<input type="file" id="coverUpload" accept="image/*" hidden></label></div>
+
+        <label class="field" for="coverTop">Accroche en haut</label>
+        <input type="text" id="coverTop" maxlength="60">
+        <div class="chips" id="coverIdeas"></div>
+
+        <label class="field" for="coverBottom">Texte du bas</label>
+        <input type="text" id="coverBottom" maxlength="30" placeholder="PARTIE 1">
+
+        <label class="field">Style</label>
+        <div class="outro-pick" id="coverStyles">
+          <button type="button" data-cover-style="choc">🔥 Choc</button>
+          <button type="button" data-cover-style="jaune">🟨 Jaune TikTok</button>
+          <button type="button" data-cover-style="news">🔴 Flash info</button>
+          <button type="button" data-cover-style="neon">💗 Néon</button>
+        </div>
+
+        <div class="row" style="margin-top:4px">
+          <div><label class="field" for="coverEmoji">Émoji</label><select id="coverEmoji"><option value="😱">😱 Choqué</option><option value="😭">😭 En larmes</option><option value="💔">💔 Cœur brisé</option><option value="🔥">🔥 Feu</option><option value="😳">😳 Gêné</option><option value="💰">💰 Argent</option><option value="">Aucun</option></select></div>
+          <div><label class="field">Effets</label>
+            <label class="check"><input type="checkbox" id="coverArrow" checked> Flèche rouge</label>
+            <label class="check"><input type="checkbox" id="coverZoom" checked> Zoom sur le visage</label></div>
+        </div>
+
+        <div class="actions">
+          <button class="btn" id="coverDownload" type="button">⬇ Télécharger (1080×1920)</button>
+          <button class="btn secondary" id="coverCopy" type="button">Copier l'accroche</button>
+        </div>
+        <div class="alert warn" id="coverInfo" hidden></div>
+        <p class="note">Sur TikTok : après l'import de la vidéo, touche « Couverture », puis « Importer » et choisis cette image.</p>
+      </div>
+    </div>
+  </div>
+  <video id="coverVideo" muted playsinline preload="auto" crossorigin="anonymous" hidden></video>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  const $ = (s, el) => (el || document).querySelector(s);
+  const $$ = (s, el) => Array.from((el || document).querySelectorAll(s));
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const euro = (n) => n === 0 ? '0 €' : `${String(n.toFixed(2)).replace('.', ',')} €`;
+  const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- Données par défaut (mode aperçu, avant /api/config) ---------- */
+  const DEFAULT_OFFER = {
+    planOrder: ['free', 'starter', 'pro', 'studio'],
+    plans: {
+      free: { id: 'free', name: 'Découverte', price: 0, monthlyCredits: 0, welcomeCredits: 40, maxDuration: 15, hd: false, models: ['grok-imagine-video-1.5-lite', 'veo3.1_fast', 'gemini_omni_flash_1.1'], imageStart: false, maxShots: 2, revisions: 1, dailyLimit: 1, characters: 0, library: false, perks: ['40 crédits offerts (tes 2 premiers épisodes)', '1 épisode par jour, jusqu\'à 15 s', '3 modèles rapides dont Grok Imagine Lite', '1 révision par épisode', 'Lien vidéo valable 48 h'] },
+      starter: { id: 'starter', name: 'Starter', price: 9.99, monthlyCredits: 250, welcomeCredits: 0, maxDuration: 30, hd: false, models: ['grok-imagine-video-1.5', 'grok-imagine-video-1.5-lite', 'veo3.1_fast', 'gemini_omni_flash_1.1', 'kling3.0_pro'], imageStart: false, maxShots: 4, revisions: 2, dailyLimit: 0, characters: 0, library: true, perks: ['250 crédits par mois (jusqu\'à 4 min de vidéo)', 'Épisodes jusqu\'à 30 s, 4 plans montés', '5 modèles dont Grok Imagine 1.5 et Kling 3.0', '2 révisions par épisode', 'Vidéothèque permanente', 'Crédits non utilisés reportés'] },
+      pro: { id: 'pro', name: 'Pro', price: 24.99, monthlyCredits: 800, welcomeCredits: 0, maxDuration: 60, hd: true, models: ['grok-imagine-video-1.5', 'grok-imagine-video-1.5-lite', 'gemini_omni_flash_1.1', 'veo3.1_fast', 'kling3.0_pro', 'veo3.1', 'seedance2_5'], imageStart: true, maxShots: 8, revisions: 0, dailyLimit: 0, characters: 3, library: true, perks: ['800 crédits par mois (jusqu\'à 13 min de vidéo)', 'Épisodes jusqu\'à 60 s, 8 plans montés', 'Tous les modèles, HD 1080p', 'Révisions illimitées', 'Image de départ et 3 personnages enregistrés', 'Vidéothèque permanente', 'Crédits reportés'] },
+      studio: { id: 'studio', name: 'Studio', price: 69.99, monthlyCredits: 2500, welcomeCredits: 0, maxDuration: 60, hd: true, models: ['grok-imagine-video-1.5', 'grok-imagine-video-1.5-lite', 'gemini_omni_flash_1.1', 'veo3.1_fast', 'kling3.0_pro', 'veo3.1', 'seedance2_5'], imageStart: true, maxShots: 12, revisions: 0, dailyLimit: 0, characters: 20, library: true, perks: ['2500 crédits par mois (jusqu\'à 40 min de vidéo)', 'Épisodes jusqu\'à 60 s, 12 plans montés', 'Tous les modèles, HD 1080p', 'Révisions illimitées', '20 personnages enregistrés', 'Vidéothèque permanente', 'Crédits reportés', 'Support prioritaire'] },
+    },
+    packs: { pack100: { id: 'pack100', name: '200 crédits', credits: 200, price: 9.99 }, pack500: { id: 'pack500', name: '1000 crédits', credits: 1000, price: 39.99 }, pack1500: { id: 'pack1500', name: '3000 crédits', credits: 3000, price: 99 } },
+    modelCredits: { 'grok-imagine-video-1.5-lite': 1, 'grok-imagine-video-1.5': 2, 'gemini_omni_flash_1.1': 1, 'veo3.1_fast': 2, 'kling3.0_pro': 3, 'veo3.1': 4, 'seedance2_5': 4 },
+    hdMultiplier: 1.5,
+  };
+  const DEFAULT_MODELS = {
+    'grok-imagine-video-1.5': { provider: 'xai', durations: r(4, 15), nativeShots: false, inPromptShots: 4, image: 'first' },
+    'grok-imagine-video-1.5-lite': { provider: 'xai', durations: r(4, 15), nativeShots: false, inPromptShots: 3, image: 'first' },
+    'veo3.1_fast': { provider: 'runway', durations: [4, 6, 8], nativeShots: false, inPromptShots: 1, image: 'first' },
+    'gemini_omni_flash_1.1': { provider: 'runway', durations: r(3, 10), nativeShots: false, inPromptShots: 3, image: 'reference' },
+    'kling3.0_pro': { provider: 'runway', durations: r(3, 15), nativeShots: true, inPromptShots: 6, image: 'first' },
+    'veo3.1': { provider: 'runway', durations: [4, 6, 8], nativeShots: false, inPromptShots: 1, image: 'first' },
+    'seedance2_5': { provider: 'runway', durations: r(3, 15), nativeShots: false, inPromptShots: 6, image: 'first' },
+  };
+  const MODEL_LABELS = {
+    'grok-imagine-video-1.5': { name: 'Grok Imagine 1.5', note: 'Le rendu des vidéos virales : 1080p natif, voix synchronisées sur les lèvres, image de départ. Séquences de 15 s montées jusqu\'à 60 s.' },
+    'grok-imagine-video-1.5-lite': { name: 'Grok Imagine 1.5 Lite', note: 'Même moteur, version économique. Idéal pour tester une idée.' },
+    'veo3.1_fast': { name: 'Veo 3.1 Fast', note: 'Rapide, voix et sons natifs. Séquences de 8 s montées bout à bout.' },
+    'gemini_omni_flash_1.1': { name: 'Gemini Omni Flash', note: 'Le plus économique. Jusqu\'à 3 plans décrits.' },
+    'kling3.0_pro': { name: 'Kling 3.0 Pro', note: 'Toujours en 1080p. Montage multi-plans natif, séquences de 15 s.' },
+    'veo3.1': { name: 'Veo 3.1', note: 'Rendu maximal, voix natives. Séquences de 8 s montées bout à bout.' },
+    'seedance2_5': { name: 'Seedance 2.5', note: 'Très cinéma, séquences de 15 s, plusieurs plans décrits.' },
+  };
+  const MODEL_ORDER = ['grok-imagine-video-1.5', 'grok-imagine-video-1.5-lite', 'veo3.1_fast', 'gemini_omni_flash_1.1', 'kling3.0_pro', 'veo3.1', 'seedance2_5'];
+  const FRUIT_EMOJI = { strawberry: '🍓', banana: '🍌', lemon: '🍋', apple: '🍎', 'red apple': '🍎', grape: '🍇', grapes: '🍇', 'bunch of grapes': '🍇', pineapple: '🍍', avocado: '🥑', watermelon: '🍉', 'watermelon slice': '🍉', kiwi: '🥝', orange: '🍊', cherry: '🍒', cherries: '🍒', peach: '🍑', pear: '🍐', mango: '🥭', tomato: '🍅', blueberry: '🫐', blueberries: '🫐', coconut: '🥥', melon: '🍈', lime: '🍋' };
+  const IDEAS = [
+    'Fraise découvre que Banane a voté contre elle pendant la cérémonie d\'élimination.',
+    'Dans le frigo n°7, Kiwi a disparu cette nuit. Raisin a tout vu mais refuse de parler.',
+    'L\'ex de Banane débarque dans la villa au moment où Pêche allait la choisir.',
+    'Citron trouve un message suspect sur le téléphone d\'Ananas : « Ma pêche à moi ».',
+    'Qui a mangé le dernier biscuit ? Pomme mène l\'enquête, Banane a des miettes sur le chapeau.',
+  ];
+  const DECORS = [
+    { id: 'cuisine', name: 'Cuisine noire', mood: 'Ampoule nue, pluie, table en bois', en: 'dark rustic farmhouse kitchen at night, single warm bulb, scarred wooden table, rain on the window' },
+    { id: 'frigo', name: 'Frigo n°7', mood: 'Néon froid, givre, ruban de police', en: 'inside an old humming refrigerator at night, cold blue neon light, frost on the shelves, police tape' },
+    { id: 'villa', name: 'Villa & piscine', mood: 'Heure dorée, guirlandes, cocktails', en: 'luxury villa pool deck at golden hour, string lights, marble table, turquoise water' },
+    { id: 'marche', name: 'Marché de nuit', mood: 'Lanternes, cagettes, pavés mouillés', en: 'night street market, hanging paper lanterns, wet cobblestones, crates of produce' },
+    { id: 'entrepot', name: 'Entrepôt', mood: 'Brouillard, phares, caisses empilées', en: 'produce warehouse at night, stacked wooden crates, forklift headlights cutting through fog' },
+    { id: 'interrogatoire', name: 'Interrogatoire', mood: 'Néon qui grésille, miroir sans tain', en: 'police interrogation room, flickering fluorescent tube, metal table, one-way mirror' },
+  ];
+  function r(a, b) { const o = []; for (let i = a; i <= b; i++) o.push(i); return o; }
+  const EPISODE_DURATIONS = [6, 8, 10, 15, 20, 30, 45, 60];
+  const OUTROS = [
+    { id: 'like', label: '❤️ Like pour la partie 2', line: 'Like si tu veux la partie 2 !', text: 'LIKE POUR LA PARTIE 2', en: 'Like for part 2!' },
+    { id: 'follow', label: '➕ Abonne-toi pour la suite', line: 'Abonne-toi pour ne pas rater la suite.', text: 'ABONNE-TOI POUR LA SUITE', en: 'Follow so you don\'t miss what happens next.' },
+    { id: 'comment', label: '💬 Commente ta théorie', line: 'À votre avis, qui ment ? Dites-le en commentaire.', text: 'TA THÉORIE EN COMMENTAIRE', en: 'Who is lying? Tell me in the comments.' },
+    { id: 'vote', label: '🗳️ Team ou team ?', line: 'Team {A} ou team {B} ? Votez en commentaire !', text: 'TEAM {A} OU TEAM {B} ?', en: 'Team {A} or team {B}? Vote in the comments!' },
+    { id: 'part2', label: '⏳ Partie 2 demain', line: 'La suite demain, même heure…', text: 'PARTIE 2 DEMAIN', en: 'Part 2 tomorrow, same time…' },
+    { id: 'share', label: '📤 Envoie à un ami', line: 'Envoie ça à quelqu\'un qui ferait pareil.', text: 'ENVOIE À UN AMI', en: 'Send this to someone who would do the same.' },
+    { id: 'custom', label: '✏️ Ma phrase', line: '', text: '' },
+    { id: 'none', label: 'Aucune', line: '', text: '' },
+  ];
+  function outroSpec(names) {
+    const o = OUTROS.find((x) => x.id === state.outro) || OUTROS[0];
+    if (o.id === 'none') return null;
+    const A = (names && names.A) || 'Fraise', B = (names && names.B) || 'Banane';
+    const fill = (t) => String(t || '').replace(/\{A\}/g, A).replace(/\{B\}/g, B);
+    const line = o.id === 'custom' ? state.outroCustom.trim() : fill(o.line);
+    if (!line) return null;
+    return { type: o.id, line, text: o.id === 'custom' ? line.toUpperCase().slice(0, 60) : fill(o.text).toUpperCase(), format: state.outroFormat, speaker: A, en: fill(o.en || '') };
+  }
+  function renderOutroPick() {
+    $('#outroPick').innerHTML = OUTROS.map((o) => `<button type="button" data-outro="${o.id}" aria-pressed="${state.outro === o.id}">${esc(o.label)}</button>`).join('');
+    $('#outroCustomWrap').hidden = state.outro !== 'custom';
+    $('#outroCustom').value = state.outroCustom;
+    $('#outroFormat').value = state.outroFormat;
+    $('#outroFormat').disabled = state.outro === 'none';
+    const sp = outroSpec();
+    const how = { both: 'dite face caméra et écrite à l\'écran', face: 'dite face caméra', text: 'écrite à l\'écran' }[state.outroFormat];
+    $('#outroPreview').innerHTML = sp ? `Dernière scène : <b>« ${esc(sp.line)} »</b>, ${how}.` : (state.outro === 'custom' ? 'Écris ta phrase de fin ci-dessus.' : 'Pas d\'appel à l\'action : l\'épisode se termine sur la dernière réplique.');
+  }
+  function nativeMax(model) { const m = state.models[model] || DEFAULT_MODELS[model]; return Math.max(...m.durations); }
+  function segmentsFor(model, d) { return Math.max(1, Math.ceil(d / nativeMax(model))); }
+
+  /* ---------- État ---------- */
+  const state = {
+    cfg: null, demo: true, offer: DEFAULT_OFFER, models: DEFAULT_MODELS,
+    me: null, characters: [], library: [], decorImages: {},
+    idea: '', setting: '', viral: false, outro: 'like', outroCustom: '', outroFormat: 'both', model: 'grok-imagine-video-1.5', duration: 8, lang: 'fr', hd: false, review: false, image: null, imageName: '', characterId: '',
+    plan: null, job: null, pollTimer: null, busy: false, lastJob: null,
+  };
+
+  /* ---------- Session Supabase ---------- */
+  const auth = {
+    session: null,
+    load() { try { const s = JSON.parse(localStorage.getItem('df_session') || 'null'); if (s && s.access_token) this.session = s; } catch { this.session = null; } },
+    save() { try { if (this.session) localStorage.setItem('df_session', JSON.stringify(this.session)); else localStorage.removeItem('df_session'); } catch { /* indisponible */ } },
+    set(data) { this.session = { access_token: data.access_token, refresh_token: data.refresh_token, expires_at: Date.now() + (Number(data.expires_in) || 3600) * 1000, user: data.user || null }; this.save(); },
+    clear() { this.session = null; this.save(); },
+    url(path) { return `${state.cfg.supabaseUrl.replace(/\/$/, '')}/auth/v1${path}`; },
+    async call(path, body, token) {
+      const r = await fetch(this.url(path), { method: 'POST', headers: { apikey: state.cfg.supabaseAnonKey, 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(body || {}) });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(friendlyAuthError(data));
+      return data;
+    },
+    async testLogin(email, password) { const r = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) }); const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || 'Connexion impossible.'); return d; },
+    async signup(email, password) { if (state.cfg && state.cfg.testMode) return this.testLogin(email, password); return this.call('/signup', { email, password }); },
+    async login(email, password) { if (state.cfg && state.cfg.testMode) return this.testLogin(email, password); return this.call('/token?grant_type=password', { email, password }); },
+    async refresh() { if (!this.session) return null; if (state.cfg && state.cfg.testMode) { this.session.expires_at = Date.now() + 30 * 864e5; this.save(); return this.session; } const d = await this.call('/token?grant_type=refresh_token', { refresh_token: this.session.refresh_token }); this.set(d); return d; },
+    async recover(email) { return this.call('/recover', { email }); },
+    async token() {
+      if (!this.session) return null;
+      if (Date.now() > this.session.expires_at - 60_000) { try { await this.refresh(); } catch { this.clear(); return null; } }
+      return this.session.access_token;
+    },
+    async logout() { const t = this.session && this.session.access_token; this.clear(); if (t && state.cfg) { try { await fetch(this.url('/logout'), { method: 'POST', headers: { apikey: state.cfg.supabaseAnonKey, Authorization: `Bearer ${t}` } }); } catch { /* ignore */ } } },
+    google() { location.href = `${this.url('/authorize')}?provider=google&redirect_to=${encodeURIComponent(location.origin + location.pathname)}`; },
+  };
+  function friendlyAuthError(d) {
+    const m = (d && (d.msg || d.message || d.error_description || d.error)) || 'Erreur de connexion.';
+    if (/Invalid login credentials/i.test(m)) return 'E-mail ou mot de passe incorrect.';
+    if (/already registered|already exists/i.test(m)) return 'Un compte existe déjà avec cet e-mail. Connecte-toi.';
+    if (/Password should be/i.test(m)) return 'Mot de passe trop court (8 caractères minimum).';
+    if (/Email not confirmed/i.test(m)) return 'Confirme ton e-mail (regarde ta boîte de réception), puis réessaie.';
+    if (/rate limit/i.test(m)) return 'Trop de tentatives, réessaie dans une minute.';
+    return m;
+  }
+
+  /* ---------- API du site ---------- */
+  async function api(path, opts) {
+    const o = Object.assign({ headers: {} }, opts || {});
+    o.headers.Accept = 'application/json';
+    const t = await auth.token();
+    if (t) o.headers.Authorization = `Bearer ${t}`;
+    if (o.body && typeof o.body !== 'string') { o.body = JSON.stringify(o.body); o.headers['Content-Type'] = 'application/json'; }
+    const r = await fetch(path, o);
+    const data = await r.json().catch(() => null);
+    if (r.status === 401) { auth.clear(); state.me = null; renderNav(); const e = new Error('Connecte-toi pour continuer.'); e.code = 'unauthorized'; throw e; }
+    if (!r.ok) { const e = new Error((data && data.error) || `Erreur serveur (${r.status})`); e.code = data && data.code; e.data = data; throw e; }
+    return data;
+  }
+
+  async function loadConfig() {
+    try {
+      const ctrl = new AbortController(); const to = setTimeout(() => ctrl.abort(), 7000);
+      const r = await fetch('/api/config', { signal: ctrl.signal, headers: { Accept: 'application/json' } });
+      clearTimeout(to);
+      if (!r.ok || !(r.headers.get('content-type') || '').includes('json')) throw new Error('no api');
+      const d = await r.json();
+      if (!d || d.ok !== true) throw new Error('no api');
+      state.cfg = d; state.demo = !d.ready.db; state.offer = d.offer || DEFAULT_OFFER; state.models = d.models || DEFAULT_MODELS;
+      $('#footSupport').textContent = d.supportEmail ? `Contact : ${d.supportEmail}` : '';
+      if (d.googleLogin) $('#googleWrap').hidden = false;
+    } catch { state.cfg = null; state.demo = true; }
+    $('#demoBanner').hidden = !state.demo;
+    $('#authDemoNote').hidden = !state.demo;
+    if (state.cfg && state.cfg.testMode && !state.demo) { $('#authDemoNote').textContent = 'Mode test : entre ton e-mail et, comme mot de passe, le code d\'accès choisi sur Vercel.'; $('#authDemoNote').hidden = false; }
+    if (state.cfg && state.cfg.testMode && !state.demo) { $('#demoBanner').textContent = 'Mode test : vraies vidéos Grok, connexion avec le code d\'accès, rien n\'est facturé.'; $('#demoBanner').hidden = false; }
+    else if (state.cfg && !state.demo && !state.cfg.ready.runway && !state.cfg.ready.xai) { $('#demoBanner').textContent = 'Clé Runway manquante sur le serveur : la génération vidéo est désactivée.'; $('#demoBanner').hidden = false; }
+  }
+
+  async function loadMe() {
+    if (state.demo) { renderNav(); return state.me; }
+    if (!auth.session) { state.me = null; renderNav(); return null; }
+    try { state.me = await api('/api/me'); } catch { state.me = null; }
+    if (state.me && !state.me.perks) state.me.perks = state.offer.plans[state.me.plan] || state.offer.plans.studio;
+    renderNav();
+    return state.me;
+  }
+
+  /* ---------- Navigation ---------- */
+  const VIEWS = ['accueil', 'studio', 'tarifs', 'compte', 'connexion'];
+  let afterLogin = 'compte';
+  function route() {
+    const raw = location.hash.replace(/^#/, '');
+    if (/access_token=/.test(raw)) {
+      const p = new URLSearchParams(raw.replace(/^\/?/, ''));
+      if (p.get('access_token')) { auth.set({ access_token: p.get('access_token'), refresh_token: p.get('refresh_token'), expires_in: p.get('expires_in') }); history.replaceState(null, '', '#studio'); loadMe().then(() => route()); return; }
+    }
+    const [name, query] = raw.split('?');
+    let view = VIEWS.includes(name) ? name : 'accueil';
+    const params = new URLSearchParams(query || '');
+    const loggedIn = state.demo ? Boolean(state.me) : Boolean(auth.session);
+    if (view === 'compte' && !loggedIn) { afterLogin = 'compte'; view = 'connexion'; }
+    if (view === 'connexion' && loggedIn) view = afterLogin;
+    VIEWS.forEach((v) => { $(`#view-${v}`).hidden = v !== view; });
+    $$('.nav a[data-nav]').forEach((a) => { if (a.dataset.nav === view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+    window.scrollTo(0, 0);
+    if (view === 'compte') { renderAccount(); loadLibrary(); loadCharacters(); if (params.get('paiement') === 'ok') { $('#accountFlash').textContent = 'Paiement reçu. Ta formule et tes crédits se mettent à jour dans quelques secondes.'; $('#accountFlash').hidden = false; setTimeout(() => loadMe().then(renderAccount), 2500); setTimeout(() => loadMe().then(renderAccount), 7000); } }
+    if (view === 'tarifs') renderPricing();
+    if (view === 'accueil' && state.cfg) loadShowcase();
+    if (view === 'studio') { renderStudio(); loadRecent(); }
+    if (view === 'connexion') { $('#authError').hidden = true; $('#authOk').hidden = true; }
+  }
+  function go(view) { if (location.hash.replace(/^#/, '') === view) route(); else location.hash = view; }
+
+  function renderNav() {
+    const logged = Boolean(state.me);
+    $('#navAccount').textContent = logged ? 'Compte' : 'Connexion';
+    $('#navAccount').href = logged ? '#compte' : '#connexion';
+    $('#navCredits').hidden = !logged;
+    if (logged) $('#navCreditsValue').textContent = state.me.admin ? '∞' : state.me.credits;
+  }
+
+  /* ---------- Accueil : carrousel d'exemples (épisodes mis en avant + TikTok), décors ---------- */
+  const DEFAULT_SHOWCASE = { profile: 'https://www.tiktok.com/@fruitanime09', local: [{ file: 'media/episode-1.mp4', poster: 'media/episode-1.jpg', title: 'L\'acte est notarié', views: '' }, { file: 'media/episode-2.mp4', poster: 'media/episode-2.jpg', title: 'Lâche Yanis', views: '' }, { file: 'media/episode-3.mp4', poster: 'media/episode-3.jpg', title: '500 000 000 €', views: '' }, { file: 'media/episode-4.mp4', poster: 'media/episode-4.jpg', title: 'Change by midnight', views: '' }, { file: 'media/episode-5.mp4', poster: 'media/episode-5.jpg', title: 'Chef exécutif', views: '' }], featured: [], items: [{ url: 'https://vm.tiktok.com/ZGdX9V41C/', id: null, title: 'Un épisode de la chaîne', thumbnail: null, views: null }] };
+  const EYE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+  function viewsBadge(v, alt) { return (v || alt) ? `<span class="views">${EYE}${esc(v || alt)}</span>` : ''; }
+  function ttIframe(id) { return `<iframe src="https://www.tiktok.com/embed/v2/${encodeURIComponent(id)}" title="Épisode TikTok" allow="encrypted-media; fullscreen; picture-in-picture" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>`; }
+  function reelCardFeatured(f) {
+    return `<div class="reel-card" data-video="${esc(f.url)}"><video src="${esc(f.url)}" muted loop playsinline preload="metadata"></video><button class="sound" type="button" aria-label="Activer le son" data-sound>🔇</button>${viewsBadge(f.views, `${f.duration} s`)}<div class="cap">${esc(f.title || 'Épisode')}<small>${esc(MODEL_LABELS[f.model] ? MODEL_LABELS[f.model].name : (f.model || ''))}</small></div></div>`;
+  }
+  function reelCardLocal(v) {
+    return `<div class="reel-card" data-video="${esc(v.file)}"><video src="${esc(v.file)}" ${v.poster ? `poster="${esc(v.poster)}"` : ''} muted loop playsinline preload="metadata"></video><button class="sound" type="button" aria-label="Activer le son" data-sound>🔇</button>${viewsBadge(v.views, 'Épisode')}<div class="cap">${esc(v.title || 'Épisode')}<small>Drama Fruit</small></div></div>`;
+  }
+  function reelCardTikTok(it) {
+    if (it.id && !state.demo) {
+      return `<div class="reel-card ${it.thumbnail ? '' : 'placeholder'}" data-tt="${esc(it.id)}" role="button" tabindex="0" aria-label="Lire sur TikTok">${it.thumbnail ? `<img src="${esc(it.thumbnail)}" alt="" loading="lazy">` : ''}<span class="play" aria-hidden="true"></span>${viewsBadge(it.views, 'TikTok')}<div class="cap">${esc((it.title || 'Épisode').slice(0, 70))}${it.author ? `<small>@${esc(it.author)}</small>` : ''}</div></div>`;
+    }
+    return `<div class="reel-card placeholder">${viewsBadge(it.views, 'TikTok')}<div class="ph"><span class="play" style="position:static;transform:none" aria-hidden="true"></span><span>${esc(it.title || 'Épisode sur TikTok')}</span><small>${state.demo ? 'Lecture directe une fois le site en ligne' : 'Voir sur TikTok'}</small></div><a class="tt" href="${esc(it.link || it.url)}" target="_blank" rel="noopener" aria-label="Voir sur TikTok"></a></div>`;
+  }
+  function reelPlaceholder(i, label) {
+    return `<div class="reel-card placeholder"><div class="ph"><span>${esc(label)}</span><small>Génère un épisode dans le studio, puis « Mettre en avant »</small></div></div>`;
+  }
+  function renderShowcase(data) {
+    if (data.profile) $('#profileLink').href = data.profile;
+    const featured = Array.isArray(data.featured) ? data.featured : [];
+    const local = (Array.isArray(data.local) ? data.local : []).filter((v) => v.file);
+    const items = (data.items || []).filter((x) => x.url);
+    const cards = local.map(reelCardLocal).concat(featured.map(reelCardFeatured), items.map(reelCardTikTok));
+    const fillers = ['ÉLIMINÉ · Le vote de minuit', 'FRIGO N°7 · Disparition', 'FRUIT ISLAND · La bombe'];
+    let i = cards.length;
+    if (!cards.length) { cards.push(reelPlaceholder(i, fillers[0])); }
+    $('#reel').innerHTML = cards.join('');
+    const n = local.length + featured.length;
+    $('#reelNote').textContent = n ? `${n} épisode${n > 1 ? 's' : ''} · son coupé, touche 🔇 pour l'activer` : (state.demo ? 'Aperçu : les vraies vidéos défilent ici une fois le site en ligne.' : 'Tes épisodes mis en avant et tes TikTok défilent ici.');
+    setupReelAutoplay();
+  }
+  function setupReelAutoplay() {
+    const vids = $$('#reel video');
+    if (!vids.length || !('IntersectionObserver' in window)) return;
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((en) => { const v = en.target; if (en.intersectionRatio > .6 && !REDUCED) v.play().catch(() => {}); else v.pause(); });
+    }, { root: $('#reel'), threshold: [0, .6, 1] });
+    vids.forEach((v) => io.observe(v));
+  }
+  async function loadShowcase() {
+    let data = DEFAULT_SHOWCASE;
+    if (!state.demo) {
+      try { const r = await fetch('/api/showcase', { headers: { Accept: 'application/json' } }); if (r.ok) { const d = await r.json(); if (d && d.ok) data = d; } } catch { /* vitrine par défaut */ }
+    }
+    state.decorImages = data.decorImages || {};
+    renderShowcase(data);
+    renderHome();
+    if (!$('#view-studio').hidden) renderDecorPick();
+  }
+  function renderHome() {
+    const imgs = state.decorImages || {};
+    const withImg = DECORS.filter((d) => imgs[d.id]);
+    $('#decorSection').hidden = withImg.length === 0;
+    $('#decorGallery').innerHTML = withImg.map((d) => `<figure class="decor"><img src="${esc(imgs[d.id])}" alt="${esc(d.name)}" loading="lazy"><figcaption><b>${esc(d.name)}</b><span>${esc(d.mood)}</span></figcaption></figure>`).join('');
+  }
+
+  /* ---------- Accueil : mur de vidéos ---------- */
+  const CLIPS = [
+    { t: 'Minuit ou prison', g: 'Arrestation' },
+    { t: 'Cinq millions, vous dites ?', g: 'Interrogatoire' },
+    { t: 'J\'ai une preuve', g: 'Coup de théâtre' },
+    { t: 'Dix milliards d\'euros', g: 'Héritage' },
+    { t: 'Son enfant est…', g: 'Révélation' },
+    { t: 'Un million, reviens', g: 'Chantage' },
+    { t: 'Reprends ce diamant', g: 'Trahison' },
+    { t: 'Le vrai diamant', g: 'Rebondissement' },
+    { t: 'Complètement ruiné', g: 'Chute' },
+    { t: 'Commente partie 2', g: 'Cliffhanger' },
+    { t: 'Tu perds ta place', g: 'Compétition', ep: 2 },
+    { t: 'Arrêtez de décider pour moi', g: 'Clash', ep: 2 },
+    { t: 'Regardez l\'enregistrement', g: 'Preuve', ep: 2 },
+    { t: 'Le concours continue', g: 'Suspense', ep: 2 },
+    { t: 'Fiancée, enceinte, dehors', g: 'Scandale', ep: 3 },
+    { t: 'Cinq cents millions', g: 'Héritage', ep: 3 },
+    { t: 'Mes héritiers', g: 'Testament', ep: 3 },
+    { t: 'Commente partie 2', g: 'Cliffhanger', ep: 3 },
+    { t: 'Or lose everything', g: 'Romance', ep: 4 },
+    { t: 'Eyes change tonight', g: 'Mystère', ep: 4 },
+    { t: 'Lie, sweetheart', g: 'Mensonge', ep: 4 },
+    { t: 'If sunrise changes', g: 'Cliffhanger', ep: 4 },
+    { t: 'Promotion de chef', g: 'Ambition', ep: 5 },
+    { t: 'Trois étapes', g: 'Rivalité', ep: 5 },
+    { t: 'Chef exécutif', g: 'Coup de théâtre', ep: 5 },
+    { t: 'Commente partie 2', g: 'Cliffhanger', ep: 5 },
+  ];
+  const EPISODES = [
+    { n: 1, title: 'L\'acte est notarié', tag: 'Arrestation', pitch: 'Une arrestation au palais, un héritage à dix milliards, un faux diamant. Raisin croyait gagner, il va tout perdre.' },
+    { n: 2, title: 'Lâche Yanis', tag: 'Compétition', pitch: 'Un concours de danse, une rivale prête à tout et un enregistrement qui fait tomber les masques.' },
+    { n: 3, title: '500 000 000 €', tag: 'Héritage', pitch: 'Une fiancée mise à la porte, un bébé surprise et cinq cents millions à partager entre les héritiers.' },
+    { n: 4, title: 'Change by midnight', tag: 'Romance', pitch: 'Un épisode tourné en anglais : un compte à rebours, des yeux qui changent de couleur et un secret avant minuit.' },
+    { n: 5, title: 'Chef exécutif', tag: 'Cuisine', pitch: 'Trois étapes pour une promotion, un chef qui ne recule devant rien et une cuisine qui explose.' },
+  ];
+  function renderEpisodes() {
+    $('#epList').innerHTML = EPISODES.map((e) => `<button type="button" role="listitem" class="ep-item" data-play-ep="${e.n}"><img src="media/episode-${e.n}.jpg" alt="" loading="lazy"><span><b>${esc(e.title)}</b><small>Épisode ${e.n} · ${esc(e.tag)}</small></span><i aria-hidden="true">▶</i></button>`).join('');
+    selectEpisode(1, false);
+  }
+  function selectEpisode(n, play) {
+    const e = EPISODES.find((x) => x.n === Number(n)) || EPISODES[0];
+    const v = $('#epVideo');
+    if (!v.src.endsWith(`episode-${e.n}.mp4`)) { v.pause(); v.src = `media/episode-${e.n}.mp4`; v.poster = `media/episode-${e.n}.jpg`; }
+    $('#epNum').textContent = `Épisode ${e.n} sur ${EPISODES.length}`;
+    $('#epTitle').textContent = `« ${e.title} »`;
+    $('#epPitch').textContent = e.pitch;
+    $$('#epList .ep-item').forEach((b) => b.setAttribute('aria-current', String(Number(b.dataset.playEp) === e.n)));
+    if (play) {
+      $('#episodes').scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'start' });
+      v.muted = false; v.play().catch(() => {});
+    }
+  }
+  function clipInner(i, withText) {
+    const c = CLIPS[(i - 1) % CLIPS.length];
+    const ep = EPISODES.find((e) => e.n === (c.ep || 1));
+    return `<video data-auto src="media/clips/c${i}.mp4" poster="media/clips/c${i}.jpg" muted loop playsinline preload="none"></video>${withText ? `<span class="tag2">${esc(c.g)}</span><div class="who">${esc(c.t)}<small>Épisode ${ep.n} · ${esc(ep.title)}</small></div>` : ''}`;
+  }
+  function clipCard(i, withText) { return `<div class="vcard" data-play-ep="${CLIPS[i - 1].ep || 1}" style="background-image:url('media/clips/c${i}.jpg')">${clipInner(i, withText)}</div>`; }
+  function renderVideoWall() {
+    const a = [1, 11, 15, 19, 23, 4, 12, 16, 20, 24, 7, 13], b = [17, 21, 25, 2, 14, 18, 22, 26, 5, 9, 10, 6];
+    const row = (ids) => { const h = ids.map((i) => clipCard(i, true)).join(''); return h + h; };
+    $('#trackA').innerHTML = row(a);
+    $('#trackB').innerHTML = row(b);
+    $('#finalWall').innerHTML = [16, 3, 24, 12, 20, 8, 25].map((i) => clipCard(i, false)).join('');
+    $$('.vcard[data-clip]').forEach((el) => { const i = Number(el.dataset.clip); el.dataset.playEp = CLIPS[i - 1].ep || 1; el.style.backgroundImage = `url('media/clips/c${i}.jpg')`; el.innerHTML = clipInner(i, true); });
+  }
+  function setupAutoplay() {
+    if (!('IntersectionObserver' in window)) { $$('.reveal').forEach((el) => el.classList.add('in')); return; }
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((en) => {
+        const v = en.target;
+        if (en.isIntersecting && !REDUCED) { if (v.preload === 'none') v.preload = 'auto'; v.play().catch(() => {}); }
+        else v.pause();
+      });
+    }, { rootMargin: '120px 0px', threshold: 0.05 });
+    $$('video[data-auto]').forEach((v) => io.observe(v));
+    const rv = new IntersectionObserver((entries) => { entries.forEach((en) => { if (en.isIntersecting) { en.target.classList.add('in'); rv.unobserve(en.target); } }); }, { threshold: 0.05 });
+    $$('.reveal').forEach((el) => rv.observe(el));
+  }
+
+  /* ---------- Offre ---------- */
+  function planCard(p) {
+    const current = state.me && state.me.plan === p.id;
+    const cls = ['plan', current ? 'current' : '', p.id === 'pro' ? 'popular' : ''].join(' ');
+    const tag = current ? 'Ta formule' : (p.id === 'pro' ? 'Le plus choisi' : '');
+    let btn;
+    if (p.id === 'free') btn = current ? '' : (state.me ? '' : `<a class="btn secondary" href="#connexion">Commencer gratuitement</a>`);
+    else if (current) btn = `<button class="btn secondary" data-portal type="button">Gérer</button>`;
+    else btn = `<button class="btn ${p.id === 'pro' ? '' : 'secondary'}" data-plan="${p.id}" type="button">${state.me && state.me.plan !== 'free' ? 'Changer pour ' + esc(p.name) : 'Choisir ' + esc(p.name)}</button>`;
+    return `<div class="${cls}">${tag ? `<span class="tag">${tag}</span>` : ''}<h3>${esc(p.name)}</h3><div class="price">${p.price === 0 ? 'Gratuit' : euro(p.price)}${p.price ? '<small> / mois</small>' : ''}</div><ul>${p.perks.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>${btn}</div>`;
+  }
+  function renderPlans(container) { container.innerHTML = state.offer.planOrder.map((id) => planCard(state.offer.plans[id])).join(''); }
+  function renderPricing() {
+    renderPlans($('#pricingPlans'));
+    const o = state.offer;
+    $('#packs').innerHTML = Object.values(o.packs).map((p) => `<div class="pack"><div><b>${esc(p.name)}</b><br><span>${euro(p.price)} · ne périment pas</span></div><button class="btn small ${p.purchasable === false ? 'secondary' : ''}" data-pack="${p.id}" type="button">Acheter</button></div>`).join('');
+    $('#modelCostsNote').textContent = MODEL_ORDER.map((m) => `${MODEL_LABELS[m].name} ${o.modelCredits[m]}`).join(' · ');
+  }
+  async function startCheckout(kind, id) {
+    if (state.demo) { info($('#pricingInfo'), 'Aperçu : le paiement s\'active une fois le site déployé avec Stripe.'); toast('Aperçu : le paiement s\'active une fois le site déployé.'); return; }
+    if (!state.me) { afterLogin = 'tarifs'; go('connexion'); return; }
+    try { const d = await api('/api/checkout', { method: 'POST', body: { kind, id } }); location.href = d.url; }
+    catch (e) { info($('#pricingInfo'), e.message); }
+  }
+  async function openPortal() {
+    if (state.demo) { toast('Aperçu : pas de portail Stripe ici.'); return; }
+    try { const d = await api('/api/portal', { method: 'POST' }); location.href = d.url; }
+    catch (e) { toast(e.message); }
+  }
+
+  /* ---------- Studio ---------- */
+  function perks() { return state.me ? state.me.perks : state.offer.plans.free; }
+  function cost(model, duration, hd) { const per = state.offer.modelCredits[model] || 0; return Math.ceil(per * duration * (hd ? state.offer.hdMultiplier : 1)); }
+  function hdPossible(model) { return model !== 'kling3.0_pro'; }
+  function decorOf(id) { return DECORS.find((d) => d.id === id) || null; }
+
+  function renderStudio() {
+    const pk = perks();
+    const ms = $('#model');
+    const providerReady = (m) => { const prov = (state.models[m] || DEFAULT_MODELS[m] || {}).provider || 'runway'; if (state.demo || !state.cfg) return true; return prov === 'xai' ? !!state.cfg.ready.xai : !!state.cfg.ready.runway; };
+    ms.innerHTML = MODEL_ORDER.map((m) => { const inPlan = pk.models.includes(m); const ready = providerReady(m); const ok = inPlan && ready; return `<option value="${m}" ${ok ? '' : 'disabled'}>${esc(MODEL_LABELS[m].name)} · ${state.offer.modelCredits[m]} cr/s${!inPlan ? ' · 🔒 formule supérieure' : (!ready ? ' · clé manquante' : '')}</option>`; }).join('');
+    const usable = MODEL_ORDER.filter((m) => pk.models.includes(m) && providerReady(m));
+    if (!usable.includes(state.model)) state.model = usable[0] || pk.models[0];
+    ms.value = state.model;
+    const mcfg = state.models[state.model] || DEFAULT_MODELS[state.model];
+    $('#modelNote').textContent = MODEL_LABELS[state.model].note;
+    const allowed = EPISODE_DURATIONS.filter((d) => d <= pk.maxDuration);
+    if (!allowed.includes(state.duration)) state.duration = allowed.includes(8) ? 8 : allowed[allowed.length - 1];
+    $('#duration').innerHTML = EPISODE_DURATIONS.map((d) => { const ok = d <= pk.maxDuration; const seg = segmentsFor(state.model, d); return `<option value="${d}" ${ok ? '' : 'disabled'}>${d} s${seg > 1 ? ` · ${seg} séquences` : ''}${ok ? '' : ' · 🔒'}</option>`; }).join('');
+    $('#duration').value = String(state.duration);
+    renderDurationNote();
+    const hdOk = pk.hd && hdPossible(state.model);
+    $('#hd').disabled = !hdOk; $('#hdLock').hidden = pk.hd; $('#hdWrap').classList.toggle('locked', !hdOk);
+    if (!hdOk) state.hd = false; $('#hd').checked = state.hd;
+    $('#hd').nextSibling.textContent = hdPossible(state.model) ? ' HD 1080p ' : ' 1080p inclus ';
+    $('#review').checked = state.review;
+    $('#viral').checked = state.viral;
+    $('#lang').value = state.lang;
+    $('#idea').value = state.idea;
+    $('#charLock').hidden = pk.imageStart;
+    $('#image').disabled = !pk.imageStart; $('#character').disabled = !pk.imageStart;
+    const cs = $('#character');
+    cs.innerHTML = `<option value="">Aucun</option>` + state.characters.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
+    cs.value = state.characterId;
+    $('#ideaChips').innerHTML = IDEAS.slice(0, 3).map((t) => `<button type="button" data-idea="${esc(t)}">${esc(t.slice(0, 48))}…</button>`).join('');
+    renderDecorPick();
+    renderOutroPick();
+    renderCost();
+  }
+  function renderDecorPick() {
+    const imgs = state.decorImages || {};
+    const hasImgs = DECORS.some((d) => imgs[d.id]);
+    $('#decorPick').innerHTML = `<button type="button" class="${hasImgs ? 'auto' : 'text'}" data-decor="" aria-pressed="${state.setting === ''}"><span>✨ Laisser l'IA choisir</span></button>` +
+      DECORS.map((d) => imgs[d.id]
+        ? `<button type="button" data-decor="${d.id}" aria-pressed="${state.setting === d.id}" title="${esc(d.mood)}"><img src="${esc(imgs[d.id])}" alt="" loading="lazy"><span>${esc(d.name)}</span></button>`
+        : `<button type="button" class="text" data-decor="${d.id}" aria-pressed="${state.setting === d.id}" title="${esc(d.mood)}"><span>${esc(d.name)}</span></button>`).join('');
+  }
+  function renderDurationNote() {
+    const pk = perks(); const seg = segmentsFor(state.model, state.duration);
+    $('#durationNote').textContent = `${pk.name} : jusqu'à ${pk.maxDuration} s · ${seg > 1 ? `monté en ${seg} séquences de ${nativeMax(state.model)} s max` : '1 séquence'}${state.me ? '' : ' (formule Découverte)'}`;
+  }
+  function renderCost() {
+    const c = cost(state.model, state.duration, state.hd);
+    const have = state.me ? (state.me.admin ? '∞' : state.me.credits) : null;
+    const ic = improveCost(); const total = c + (state.viral ? ic : 0);
+    $('#costPill').innerHTML = `≈ ${total} crédits${state.viral ? ` (dont ${ic} pour le boost)` : ''}${have !== null ? ` · il t'en reste <b>${have}</b>` : ''}`;
+    $('#costPill2').textContent = `${c} crédits`;
+    $('#btnCreate').textContent = `Créer l'épisode (${total} crédits)`;
+    $('#btnImprove').textContent = `✨ Améliorer avec l'IA (${ic} crédits)`;
+    $('#btnRewrite').textContent = `✨ Améliorer avec l'IA (${ic} crédits)`;
+    $('#viralCostTag').textContent = `+${ic} crédits`;
+    $('#btnShoot').textContent = `Tourner cet épisode (${c} crédits)`;
+  }
+
+  function setStage(n, status) {
+    [1, 2, 3].forEach((i) => { const el = $(`#st${i}`); el.classList.toggle('on', i === n && status !== 'done'); el.classList.toggle('done', i < n || (i === n && status === 'done')); });
+  }
+  function showProgress(p, text, indeterminate) {
+    const pr = $('#progress'); pr.hidden = false; pr.classList.toggle('indeterminate', !!indeterminate);
+    $('#progressBar').style.width = indeterminate ? '' : `${Math.round(p * 100)}%`;
+    if (text !== undefined) $('#runStatus').textContent = text;
+  }
+  function hideProgress() { $('#progress').hidden = true; }
+  function err(el, msg) { el.textContent = msg; el.hidden = !msg; }
+  function info(el, msg) { el.textContent = msg; el.hidden = !msg; }
+
+  function seatAvatar(c) { return `<span style="font-size:19px">${FRUIT_EMOJI[(c.fruit || '').toLowerCase()] || '🍈'}</span>`; }
+  function renderPlan(editable) {
+    const p = state.plan; if (!p) return;
+    $('#planBox').hidden = false;
+    $('#planTitle').textContent = p.title;
+    $('#planLogline').textContent = p.logline || '';
+    $('#viralBox').hidden = !p.viral;
+    $('#viralBox').innerHTML = p.viral ? `<b>✨ Version boostée par l'IA</b><ul>${(p.changes || ['Scénario optimisé pour la viralité']).map((c) => `<li>${esc(c)}</li>`).join('')}</ul>` : '';
+    $('#planCast').innerHTML = p.cast.map((c) => `<span class="seat"><span class="av">${seatAvatar(c)}</span>${esc(c.name)}${c.look ? ` <small>· ${esc(c.look)}</small>` : ''}</span>`).join('');
+    $('#planShots').innerHTML = p.shots.map((s, i) => `<div class="shot"><div class="shot-head"><span>Plan ${i + 1}</span><span>${s.seconds} s</span></div><div class="visual">${esc(s.visual)}</div><div class="lines">${s.dialogue.map((d, j) => `<div class="line"><span class="who">${esc(d.who)} <small style="color:var(--muted);font-weight:400">${esc(d.tone)}</small></span>${editable ? `<input type="text" data-shot="${i}" data-line="${j}" value="${esc(d.line)}" maxlength="160" aria-label="Réplique de ${esc(d.who)}">` : `<span class="static">« ${esc(d.line)} »</span>`}</div>`).join('')}</div></div>`).join('');
+    const o = p.outro;
+    const how = o ? { both: 'face caméra + texte', face: 'face caméra', text: 'texte à l\'écran' }[o.format] : '';
+    $('#planShots').insertAdjacentHTML('beforeend', o ? `<div class="shot outro"><div class="shot-head"><span>Fin · appel à l'action</span><span>${esc(how)}</span></div><div class="lines"><div class="line"><span class="who">${esc(o.format === 'text' ? 'Écran' : o.speaker)} <small style="color:var(--muted);font-weight:400">to camera</small></span>${editable ? `<input type="text" id="outroLineEdit" value="${esc(o.line)}" maxlength="120" aria-label="Phrase de fin">` : `<span class="static">« ${esc(o.line)} »</span>`}</div></div>${o.format !== 'face' ? `<span class="ovl">${esc(o.text)}</span>` : ''}</div>` : '');
+    $('#reviewActions').hidden = !editable;
+  }
+
+  function directorBody(extra) {
+    const d = decorOf(state.setting);
+    return Object.assign({ idea: state.idea, lang: state.lang, duration: state.duration, model: state.model, settingDesc: d ? d.en : '', outro: outroSpec() }, extra || {});
+  }
+  function attachOutro(plan) {
+    if (!plan) return plan;
+    const names = { A: plan.cast && plan.cast[0] ? plan.cast[0].name : 'Fraise', B: plan.cast && plan.cast[1] ? plan.cast[1].name : 'Banane' };
+    plan.outro = outroSpec(names);
+    return plan;
+  }
+  function improveCost() { return (state.offer && state.offer.improveCredits) || 5; }
+  function checkImproveCredits() {
+    if (!state.me || state.me.admin) return true;
+    if (state.me.credits >= improveCost()) return true;
+    const e = new Error(`L'amélioration IA coûte ${improveCost()} crédits et il t'en reste ${state.me.credits}. `); e.code = 'insufficient_credits'; throw e;
+  }
+  function chargeImproveLocally() { if (state.me && !state.me.admin) { state.me.credits = Math.max(0, state.me.credits - improveCost()); renderNav(); renderCost(); } }
+  const VIRAL_HOOKS = ['Tu ne vas jamais croire ce qu\'il s\'est passé ce soir.', 'Ce soir, quelqu\'un va tout perdre.', 'Personne n\'aurait dû voir ça.', 'Elle pensait que personne ne savait.'];
+  function viralize(plan, feedback) {
+    const p = JSON.parse(JSON.stringify(plan));
+    const A = p.cast && p.cast[0] ? p.cast[0].name : 'Fraise';
+    const first = p.shots[0]; const last = p.shots[p.shots.length - 1];
+    first.visual = 'COLD OPEN HOOK in the very first second: extreme close-up on a shocked face, sudden zoom, dramatic sound sting. ' + first.visual;
+    first.dialogue.unshift({ who: A, tone: 'whispering to camera', line: VIRAL_HOOKS[Math.floor(Math.random() * VIRAL_HOOKS.length)] });
+    p.shots.forEach((sh, i) => { if (i > 0 && i < p.shots.length - 1) sh.visual += ' Faster cuts, a twist is revealed, reactions in close-up.'; });
+    last.visual += ' Cliffhanger: freeze on the most shocked face, sharp cut to black before the answer.';
+    if (feedback) p.shots.forEach((sh) => { sh.visual += ` Director note: ${feedback}`; });
+    p.title = p.title.replace(/^Version \d+ · /, '');
+    p.caption = `😱 ${p.caption || ''}`.trim();
+    p.hashtags = Array.from(new Set((p.hashtags || []).concat(['#pourtoi', '#fyp', '#drama'])));
+    p.viral = true;
+    p.changes = ['Accroche choc dès la première seconde', 'Rythme accéléré et rebondissement au milieu', 'Fin sur un cliffhanger pour pousser à la suite', 'Légende et hashtags optimisés'].concat(feedback ? [`Tes remarques : « ${feedback} »`] : []);
+    return p;
+  }
+  async function writePlan(extra) {
+    const viral = Boolean(extra && extra.viral);
+    if (viral) checkImproveCredits();
+    if (state.demo || (state.cfg && state.cfg.ready.llm === 'none')) {
+      const base = localDirector(extra);
+      if (!viral) return base;
+      chargeImproveLocally();
+      return viralize(extra.previousPlan && !extra.previousPlan.viral ? extra.previousPlan : base, extra.feedback);
+    }
+    const d = await api('/api/director', { method: 'POST', body: directorBody(extra) });
+    if (state.me && !state.me.admin && typeof d.balance === 'number') { state.me.credits = d.balance; renderNav(); renderCost(); }
+    if (d.fallback) return viral ? viralize(localDirector(extra), extra.feedback) : localDirector(extra);
+    return d.plan && d.plan.outro !== undefined ? d.plan : attachOutro(d.plan);
+  }
+
+
+  async function createEpisode() {
+    err($('#studioError'), ''); info($('#studioInfo'), '');
+    state.idea = $('#idea').value.trim();
+    if (!state.idea) { err($('#studioError'), 'Raconte d\'abord ton idée d\'épisode.'); $('#idea').focus(); return; }
+    if (!state.demo && !state.me) { afterLogin = 'studio'; go('connexion'); return; }
+    if (state.busy) return;
+    state.busy = true; $('#btnCreate').disabled = true;
+    $('#studioRun').hidden = false; $('#resultBox').hidden = true; $('#feedbackBox').hidden = true; $('#planBox').hidden = true; err($('#runError'), '');
+    $('#studioRun').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setStage(1); showProgress(0, 'Le réalisateur écrit le scénario…', true);
+    try {
+      if (state.viral) showProgress(0, 'Le réalisateur écrit le scénario, puis l\'IA le booste…', true);
+      state.plan = await writePlan(state.viral ? { viral: true } : undefined);
+      state.lastJob = null;
+      if (state.review) { hideProgress(); $('#runStatus').textContent = 'Relis, corrige une réplique si tu veux, puis tourne.'; renderPlan(true); }
+      else { renderPlan(false); await shoot(null); }
+    } catch (e) { hideProgress(); err($('#runError'), e.message); if (e.code === 'insufficient_credits') $('#runError').insertAdjacentHTML('beforeend', '<a href="#tarifs">Recharger des crédits →</a>'); if (e.code === 'unauthorized') { afterLogin = 'studio'; go('connexion'); } }
+    finally { state.busy = false; $('#btnCreate').disabled = false; }
+  }
+
+  function collectEditedLines() {
+    const ol = $('#outroLineEdit'); if (ol && state.plan.outro && ol.value.trim()) { state.plan.outro.line = ol.value.trim(); if (state.plan.outro.type === 'custom') state.plan.outro.text = state.plan.outro.line.toUpperCase().slice(0, 60); }
+    $$('#planShots input[data-shot]').forEach((inp) => { const s = state.plan.shots[Number(inp.dataset.shot)]; if (s && s.dialogue[Number(inp.dataset.line)]) s.dialogue[Number(inp.dataset.line)].line = inp.value.trim() || s.dialogue[Number(inp.dataset.line)].line; });
+  }
+
+  async function shoot(parentJobId) {
+    if (state.demo) {
+      hideProgress(); setStage(2);
+      $('#runStatus').textContent = '';
+      info($('#studioInfo'), 'Aperçu : le tournage démarre une fois le site déployé avec ta clé Runway. Le scénario ci-dessus, lui, est bien généré.');
+      $('#feedbackBox').hidden = false; $('#revisionNote').textContent = 'En aperçu, l\'amélioration réécrit le scénario sans tourner.';
+      return;
+    }
+    if (!state.cfg.ready.runway && !state.cfg.ready.xai) { hideProgress(); err($('#runError'), 'Clé vidéo manquante sur le serveur.'); return; }
+    setStage(2); showProgress(0, 'Envoi au plateau…', true);
+    $('#resultBox').hidden = false; $('#screenIdle').hidden = false; $('#screenText').textContent = 'Plateau en place, tournage en cours…';
+    const old = $('#screen video'); if (old) old.remove();
+    const body = { plan: state.plan, outro: state.plan.outro || null, model: state.model, duration: state.duration, hd: state.hd, lang: state.lang, parentJobId: parentJobId || undefined };
+    if (state.characterId) body.characterId = state.characterId; else if (state.image) body.imageDataUrl = state.image;
+    let d;
+    try { d = await api('/api/generate', { method: 'POST', body }); }
+    catch (e) {
+      hideProgress(); $('#resultBox').hidden = true;
+      if (e.code === 'insufficient_credits') { err($('#runError'), `${e.message} `); $('#runError').insertAdjacentHTML('beforeend', '<a href="#tarifs">Recharger des crédits →</a>'); }
+      else if (e.code && e.code.startsWith('plan_')) { err($('#runError'), `${e.message} `); $('#runError').insertAdjacentHTML('beforeend', '<a href="#tarifs">Voir les formules →</a>'); }
+      else if (e.code === 'daily_limit') { err($('#runError'), `${e.message} `); $('#runError').insertAdjacentHTML('beforeend', '<a href="#tarifs">Passer à Starter →</a>'); }
+      else err($('#runError'), e.message);
+      return;
+    }
+    state.job = { id: d.jobId, startedAt: Date.now(), cost: d.cost };
+    if (state.me && !state.me.admin && typeof d.balance === 'number') { state.me.credits = d.balance; renderNav(); renderCost(); }
+    $('#runStatus').textContent = `Tournage lancé (${d.cost} crédits). Compte 1 à 3 minutes.`;
+    $('#resultMeta').innerHTML = `<b>${esc(state.plan.title)}</b><br>${esc(MODEL_LABELS[state.model].name)} · ${state.duration} s${state.hd ? ' · HD' : ''} · ${d.cost} crédits`;
+    $('#captionBox').textContent = `${state.plan.caption || ''}\n${(state.plan.hashtags || []).join(' ')}`.trim();
+    pollJob();
+  }
+
+  function schedulePoll(ms) { clearTimeout(state.pollTimer); state.pollTimer = setTimeout(pollJob, ms); }
+  async function pollJob() {
+    const job = state.job; if (!job) return;
+    try {
+      const j = await api(`/api/job?id=${encodeURIComponent(job.id)}`);
+      const mins = Math.round((Date.now() - job.startedAt) / 6000) / 10;
+      if (j.status === 'done') { finish(j); return; }
+      if (j.status === 'failed') {
+        hideProgress(); state.job = null; setStage(2);
+        const mod = /SAFETY|MODERATION/i.test(j.failureCode || '');
+        err($('#runError'), `${mod ? 'Le modèle a refusé ce scénario (modération). Reformule l\'idée ou les répliques.' : 'Le tournage a échoué chez Runway.'} ${j.refunded ? 'Tes crédits ont été rendus.' : ''}`);
+        $('#screenText').textContent = 'Pas de vidéo cette fois.';
+        $('#feedbackBox').hidden = false; $('#revisionNote').textContent = 'Décris ce qu\'il faut changer, puis relance.';
+        await loadMe(); renderCost();
+        return;
+      }
+      const label = j.status === 'running' ? 'Rendu en cours' : 'En file d\'attente';
+      const p = typeof j.progress === 'number' ? j.progress : null;
+      showProgress(p || 0, `${label}${p !== null ? ' · ' + Math.round(p * 100) + ' %' : ''} · ${mins} min`, p === null);
+      schedulePoll(5000);
+    } catch (e) { $('#runStatus').textContent = `${e.message} · nouvel essai dans 8 s`; schedulePoll(8000); }
+  }
+
+  function finish(j) {
+    hideProgress(); setStage(3, 'done'); state.job = null; state.lastJob = j;
+    $('#runStatus').textContent = 'Épisode prêt.';
+    $('#resultBox').hidden = false;
+    const screen = $('#screen'); const old = $('#screen video'); if (old) old.remove();
+    $('#screenIdle').hidden = Boolean(j.outputUrl);
+    if (j.outputUrl) { const v = document.createElement('video'); v.controls = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.src = j.outputUrl; screen.appendChild(v); $('#btnOpen').href = j.outputUrl;
+      if (Array.isArray(j.segments) && j.segments.length > 1) { let k = 0; v.addEventListener('ended', () => { k = (k + 1) % j.segments.length; v.src = j.segments[k]; if (k) v.play().catch(() => {}); }); } }
+    $('#resultMeta').innerHTML = `<b>${esc(j.title || state.plan.title)}</b><br>${esc(MODEL_LABELS[j.model] ? MODEL_LABELS[j.model].name : j.model)} · ${j.duration} s${j.hd ? ' · HD' : ''} · ${j.cost} crédits`;
+    const p = j.plan || state.plan;
+    $('#captionBox').textContent = `${p.caption || ''}\n${(p.hashtags || []).join(' ')}`.trim();
+    $('#expiryNote').hidden = j.stored;
+    renderFeatureBtn();
+    $('#feedbackBox').hidden = false;
+    const pk = perks();
+    $('#revisionNote').textContent = pk.revisions > 0 ? `Formule ${pk.name} : ${pk.revisions} révision${pk.revisions > 1 ? 's' : ''} par épisode (${j.revisions || 0} utilisée${(j.revisions || 0) > 1 ? 's' : ''}).` : 'Révisions illimitées sur ta formule. Retourner coûte le prix d\'un épisode.';
+    loadMe().then(() => { renderCost(); loadRecent(); });
+  }
+
+  async function improve(fromReview) {
+    const fb = fromReview ? '' : $('#feedback').value.trim();
+    if (state.busy || !state.plan) return;
+    state.busy = true; $('#btnImprove').disabled = true; $('#btnRewrite').disabled = true; err($('#runError'), '');
+    $('#resultBox').hidden = true; setStage(1); showProgress(0, 'L\'IA rend ton épisode plus viral…', true);
+    try {
+      const jobId = state.lastJob ? state.lastJob.id : undefined;
+      state.plan = await writePlan({ previousPlan: state.plan, feedback: fb, jobId, viral: true });
+      if (!fromReview) $('#feedback').value = '';
+      hideProgress();
+      $('#runStatus').textContent = `Version améliorée (${improveCost()} crédits). Relis, corrige si tu veux, puis tourne.`;
+      renderPlan(true);
+      $('#feedbackBox').hidden = true;
+      $('#planBox').scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'start' });
+    } catch (e) {
+      hideProgress(); err($('#runError'), e.message);
+      if (e.code === 'insufficient_credits') $('#runError').insertAdjacentHTML('beforeend', '<a href="#tarifs">Recharger des crédits →</a>');
+      if (e.code === 'revision_limit') $('#runError').insertAdjacentHTML('beforeend', ' <a href="#tarifs">Voir les formules →</a>');
+      if (state.lastJob) $('#resultBox').hidden = false;
+    } finally { state.busy = false; $('#btnImprove').disabled = false; $('#btnRewrite').disabled = false; }
+  }
+
+  async function toggleFeature(jobId, on, viewsLabel) {
+    try {
+      const body = { jobId, featured: on };
+      if (typeof viewsLabel === 'string') body.viewsLabel = viewsLabel;
+      await api('/api/feature', { method: 'POST', body });
+      toast(on ? 'Épisode mis en avant sur l\'accueil.' : 'Épisode retiré de l\'accueil.');
+      if (state.lastJob && state.lastJob.id === jobId) { state.lastJob.featured = on; renderFeatureBtn(); }
+      loadLibrary(); loadRecent();
+    } catch (e) { toast(e.message); }
+  }
+  function renderFeatureBtn() {
+    const old = $('#btnFeature'); if (old) old.remove();
+    if (!state.me || !state.me.admin || !state.lastJob || !state.lastJob.stored) return;
+    const on = Boolean(state.lastJob.featured);
+    $('#resultBox .actions').insertAdjacentHTML('beforeend', `<button class="btn ${on ? 'secondary' : ''} small" id="btnFeature" type="button" data-feature="${esc(state.lastJob.id)}" data-on="${on}">${on ? '★ Retirer de l\'accueil' : '☆ Mettre en avant sur l\'accueil'}</button>`);
+  }
+  async function loadRecent() {
+    if (state.demo || !state.me) { $('#recentBox').hidden = true; return; }
+    try {
+      const d = await api('/api/library');
+      state.library = d.items || [];
+      const items = state.library.slice(0, 5);
+      $('#recentBox').hidden = !items.length;
+      $('#recentList').innerHTML = items.map(libItem).join('');
+    } catch { $('#recentBox').hidden = true; }
+  }
+  function libItem(it) {
+    const st = { done: 'prêt', failed: 'échec', running: 'en cours', queued: 'en file', creating: 'en file' }[it.status] || it.status;
+    const admin = state.me && state.me.admin && it.status === 'done' && it.stored;
+    const adminRow = admin ? `<div class="feature-row"><button class="btn ${it.featured ? 'secondary' : ''} small" type="button" data-feature="${esc(it.id)}" data-on="${Boolean(it.featured)}">${it.featured ? '★ Retirer de l\'accueil' : '☆ Mettre en avant'}</button><input type="text" data-views="${esc(it.id)}" value="${esc(it.viewsLabel || '')}" placeholder="Vues (ex. 1,8 M)" aria-label="Compteur de vues affiché"></div>` : '';
+    return `<li style="grid-template-columns:1fr auto"><div><div class="t">${esc(it.title || 'Épisode')}${it.featured ? ' <span class="lock">★ accueil</span>' : ''}</div><div class="m">${new Date(it.createdAt).toLocaleString('fr-FR')} · ${esc(MODEL_LABELS[it.model] ? MODEL_LABELS[it.model].name : it.model)} · ${it.duration} s · ${it.cost} cr · ${st}</div>${adminRow}</div>${it.outputUrl ? `<a class="btn secondary small" href="${esc(it.outputUrl)}" target="_blank" rel="noopener">Voir</a>` : `<span class="m">${st}</span>`}</li>`;
+  }
+
+  function handleImageFile(file, cb) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const max = 1024; const scale = Math.min(1, max / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+        const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(img, 0, 0, w, h);
+        cb(c.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = () => toast('Image illisible.');
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  /* ---------- Réalisateur intégré (aperçu / sans clé IA) ---------- */
+  const FR_FRUITS = [['fraise', 'Fraise', 'strawberry'], ['banane', 'Banane', 'banana'], ['citron', 'Citron', 'lemon'], ['pomme', 'Pomme', 'red apple'], ['raisin', 'Raisin', 'bunch of grapes'], ['ananas', 'Ananas', 'pineapple'], ['avocat', 'Avocat', 'avocado'], ['pastèque', 'Pastèque', 'watermelon'], ['kiwi', 'Kiwi', 'kiwi'], ['orange', 'Orange', 'orange'], ['cerise', 'Cerise', 'cherry'], ['pêche', 'Pêche', 'peach'], ['poire', 'Poire', 'pear'], ['mangue', 'Mangue', 'mango'], ['tomate', 'Tomate', 'tomato'], ['myrtille', 'Myrtille', 'blueberry']];
+  const GENRES = [
+    { test: /frigo|dispar|crime|enqu|témoin|nuit du/i, decor: 'frigo', visuals: ['Documentary interview framing: {A} alone on the middle shelf, breath visible, speaking to camera.', 'Slow pan across the shelves to the empty vegetable drawer; {B} appears in the dark doorway.'], lines: [['A', 'grave', 'Le jour où {B} a disparu, la lumière du frigo s\'est éteinte.'], ['C', 'nervous', 'On entendait des bruits derrière le beurre.'], ['A', 'whispering', 'Et personne n\'a rouvert la porte depuis.']], caption: 'Que s\'est-il passé dans le FRIGO N°7 ? 🧊 Vos théories en commentaire', tags: ['#frigo7', '#truecrime'], logline: 'Une disparition, un témoin, une porte fermée.' },
+    { test: /villa|amour|ex |couple|cérémonie|choisi|romance|piscine/i, decor: 'villa', visuals: ['{A} and {B} sit close on a rattan sofa, cocktails sweating; {C} watches from the doorway, jaw tight.', 'Close-up on {C} walking in; everyone turns; the music cuts.'], lines: [['A', 'soft', '{B}, je crois que c\'est toi que je choisis.'], ['C', 'broken', 'Et moi, j\'étais quoi ? Un bouche-trou ?'], ['A', 'firm', 'Trop tard. La cérémonie, c\'est maintenant.']], caption: 'Team {B} ou team {C} ? 💔🌴 Votez', tags: ['#fruitisland', '#romance'], logline: 'Une cérémonie, deux cœurs, un seul choix.' },
+    { test: /tromp|trahi|message|téléphone|ment|secret|cœur/i, decor: 'cuisine', visuals: ['{A} holds the phone with a trembling hand; {B} frozen in the doorway with grocery bags.', 'Push-in on {B} as {C} appears behind, surprised.'], lines: [['A', 'trembling', 'C\'est qui, {C} ?'], ['B', 'panicked', 'Une collègue... du rayon frais.'], ['C', 'entering', 'Chéri ? Tu as oublié ton tablier chez moi.']], caption: 'Grillé en direct 💔 Elle doit le quitter ? 👇', tags: ['#trahison', '#drame'], logline: 'Un message à 2 h du matin change tout.' },
+    { test: /biscuit|gâteau|drôle|rire|régime|blague|miette/i, decor: 'cuisine', visuals: ['{A} stares at an empty cookie jar while {B} whistles innocently, crumbs everywhere.', '{C} walks past and points at {B}\'s hat.'], lines: [['A', 'suspicious', 'Qui a mangé le dernier biscuit ?'], ['B', 'mouth full', 'Chépa.'], ['C', 'passing by', 'Tu as des miettes sur le chapeau, {B}.'], ['B', 'confident', 'C\'est de la neige.']], caption: '« C\'est de la neige » 😂 Vous le croyez ? 👇', tags: ['#humour', '#comedie'], logline: 'Un biscuit disparu, un suspect évident.' },
+    { test: /.*/, decor: 'cuisine', visuals: ['The contestants stand in a tense circle around the table; an elimination list pinned to the wall. Slow push-in on {A}.', 'Close-up on {B} sweating, {C} smirking; {A} turns to camera.'], lines: [['A', 'icy', 'Ce soir, l\'un de nous quitte la cuisine.'], ['B', 'panicked', 'Pourquoi tu me regardes comme ça, {A} ?'], ['C', 'sly', 'Parce que c\'est toi qui as voté contre elle.'], ['A', 'to camera', 'Les commentaires décideront. Votez.']], caption: 'Qui doit être ÉLIMINÉ ce soir ? Votez en commentaire 👇🍓', tags: ['#elimine', '#telerealite'], logline: 'Un vote, une trahison, une cuisine.' },
+  ];
+  function localDirector(extra) {
+    const found = FR_FRUITS.filter((f) => new RegExp(f[0], 'i').test(state.idea)).map((f) => ({ name: f[1], fruit: f[2], look: '' }));
+    const cast = (found.length ? found : [{ name: 'Fraise', fruit: 'strawberry', look: 'flat cap' }, { name: 'Banane', fruit: 'banana', look: 'crooked bow tie' }, { name: 'Citron', fruit: 'lemon', look: 'round glasses' }]).slice(0, 4);
+    while (cast.length < 3) cast.push([{ name: 'Banane', fruit: 'banana', look: '' }, { name: 'Citron', fruit: 'lemon', look: '' }, { name: 'Kiwi', fruit: 'kiwi', look: '' }].find((c) => !cast.some((x) => x.name === c.name)));
+    const g = GENRES.find((x) => x.test.test(state.idea));
+    const setting = decorOf(state.setting) || decorOf(g.decor);
+    const N = { A: cast[0].name, B: cast[1].name, C: cast[2].name };
+    const fill = (s) => s.replace(/\{A\}/g, N.A).replace(/\{B\}/g, N.B).replace(/\{C\}/g, N.C);
+    const pk = perks(); const mcfg = state.models[state.model] || DEFAULT_MODELS[state.model];
+    const seg = segmentsFor(state.model, state.duration);
+    const maxShots = Math.max(1, Math.min(pk.maxShots, Math.max(seg, mcfg.inPromptShots)));
+    const nShots = Math.max(seg, Math.min(maxShots, Math.ceil(state.duration / 8)));
+    const lines = g.lines.map((l) => ({ who: N[l[0]], tone: l[1], line: fill(l[2]) }));
+    const base = Math.floor(state.duration / nShots); let extraSec = state.duration - base * nShots;
+    const per = Math.ceil(lines.length / nShots);
+    const shots = nShots === 1
+      ? [{ seconds: state.duration, visual: fill(g.visuals[0]) + ' Then: ' + fill(g.visuals[1]), dialogue: lines }]
+      : Array.from({ length: nShots }, (_, k) => ({ seconds: base + (extraSec-- > 0 ? 1 : 0), visual: fill(g.visuals[k % g.visuals.length]) + (k >= g.visuals.length ? ' The tension escalates, closer framing.' : ''), dialogue: lines.slice(k * per, (k + 1) * per) }));
+    const revised = extra && extra.previousPlan;
+    const outro = outroSpec(N);
+    if (outro) {
+      const last = shots[shots.length - 1];
+      if (outro.format !== 'text') last.visual += ` Final beat: ${outro.speaker} turns to face the camera and delivers the closing line straight to the viewer.`;
+      if (outro.format !== 'face') last.visual += ` Big bold on-screen text at the end: "${outro.text}".`;
+    }
+    return { title: (revised ? 'Version 2 · ' : '') + (state.idea.split(/[.!?]/)[0].slice(0, 60) || 'Épisode'), logline: g.logline, cast, setting: setting.en, shots, outro, caption: outro ? `${outro.line} ${fill(g.caption)}` : fill(g.caption), hashtags: ['#dramafruit', '#fruitdrama', '#fruitsIA', '#tiktokfr'].concat(g.tags) };
+  }
+
+  /* ---------- Couverture TikTok ---------- */
+  const COVER_HOOKS = ['IL A TOUT PERDU', 'ELLE NE S\'Y ATTENDAIT PAS…', 'PERSONNE N\'A VU ÇA VENIR', 'LA TRAHISON DE TROP', '{A} A CRAQUÉ', 'LE SECRET DE {A}', 'ÇA A TRÈS MAL TOURNÉ…', 'ATTENDS LA FIN', 'IL L\'A HUMILIÉE DEVANT TOUT LE MONDE', 'ELLE A DÉCOUVERT LA VÉRITÉ'];
+  const cover = { src: '', poster: '', title: '', names: {}, top: '', bottom: 'PARTIE 1', style: 'choc', emoji: '😱', arrow: true, zoom: true, img: null, ready: false, tainted: false };
+  function coverHooks() {
+    const A = (cover.names.A || 'Fraise').toUpperCase();
+    const list = COVER_HOOKS.map((h) => h.replace(/\{A\}/g, A));
+    if (cover.title) list.unshift(cover.title.toUpperCase().slice(0, 50));
+    return Array.from(new Set(list)).slice(0, 7);
+  }
+  function openCover(opts) {
+    cover.src = opts.src || ''; cover.poster = opts.poster || ''; cover.title = opts.title || '';
+    cover.names = opts.names || {}; cover.img = null; cover.ready = false; cover.tainted = false;
+    const hooks = coverHooks();
+    cover.top = hooks[1] || hooks[0]; cover.bottom = opts.bottom || 'PARTIE 1';
+    $('#coverTop').value = cover.top; $('#coverBottom').value = cover.bottom;
+    $('#coverIdeas').innerHTML = hooks.map((h) => `<button type="button" data-cover-hook="${esc(h)}">${esc(h)}</button>`).join('');
+    renderCoverStyles(); info($('#coverInfo'), '');
+    $('#coverModal').hidden = false; document.body.style.overflow = 'hidden';
+    const v = $('#coverVideo');
+    if (cover.poster) { const pi = new Image(); pi.onload = () => { if (!cover.ready && !cover.img) { cover.posterImg = pi; drawCover(); } }; pi.src = cover.poster; }
+    v.onloadedmetadata = () => { const d = v.duration || 10; $('#coverTime').max = String(Math.max(0.1, d - 0.1)); const t = Math.min(d - 0.1, d * 0.38); $('#coverTime').value = String(t); v.currentTime = t; };
+    v.onseeked = () => { cover.ready = true; drawCover(); };
+    v.onerror = () => { info($('#coverInfo'), 'Impossible de lire cette vidéo ici. Utilise « Mon image » avec une capture d\'écran de l\'épisode.'); };
+    v.src = cover.src || ''; if (cover.src) v.load();
+    drawCover();
+    setTimeout(() => $('#coverTop').focus(), 50);
+  }
+  function closeCover() { $('#coverModal').hidden = true; document.body.style.overflow = ''; const v = $('#coverVideo'); v.pause(); v.removeAttribute('src'); v.load(); }
+  function renderCoverStyles() { $$('#coverStyles button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.coverStyle === cover.style))); $$('#coverIdeas button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.coverHook === cover.top))); }
+  function wrapText(ctx, text, maxW) {
+    const words = String(text || '').split(/\s+/).filter(Boolean); const lines = []; let cur = '';
+    words.forEach((w) => { const t = cur ? `${cur} ${w}` : w; if (ctx.measureText(t).width > maxW && cur) { lines.push(cur); cur = w; } else cur = t; });
+    if (cur) lines.push(cur); return lines;
+  }
+  function fitFont(ctx, text, maxW, maxLines, start, min) {
+    let size = start;
+    for (; size >= min; size -= 4) { ctx.font = `${size}px Anton, Impact, 'Arial Black', sans-serif`; const ls = wrapText(ctx, text, maxW); if (ls.length <= maxLines) return { size, lines: ls }; }
+    ctx.font = `${min}px Anton, Impact, 'Arial Black', sans-serif`; return { size: min, lines: wrapText(ctx, text, maxW).slice(0, maxLines) };
+  }
+  function drawCover() {
+    const c = $('#coverCanvas'); const ctx = c.getContext('2d'); const W = c.width, H = c.height;
+    ctx.fillStyle = '#130a11'; ctx.fillRect(0, 0, W, H);
+    const src = cover.img || (cover.ready ? $('#coverVideo') : cover.posterImg);
+    if (src) {
+      const sw = src.videoWidth || src.naturalWidth || src.width, sh = src.videoHeight || src.naturalHeight || src.height;
+      if (sw && sh) {
+        const z = cover.zoom ? 1.18 : 1; const s = Math.max(W / sw, H / sh) * z; const dw = sw * s, dh = sh * s;
+        ctx.save(); ctx.filter = 'contrast(1.12) saturate(1.25)'; ctx.drawImage(src, (W - dw) / 2, (H - dh) / 2.4, dw, dh); ctx.restore();
+      }
+    }
+    let g = ctx.createLinearGradient(0, 0, 0, H * 0.42); g.addColorStop(0, 'rgba(0,0,0,.78)'); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H * 0.42);
+    g = ctx.createLinearGradient(0, H * 0.7, 0, H); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.8)'); ctx.fillStyle = g; ctx.fillRect(0, H * 0.7, W, H * 0.3);
+    if (cover.style === 'neon') { ctx.fillStyle = 'rgba(255,61,110,.12)'; ctx.fillRect(0, 0, W, H); }
+    const top = (cover.top || '').toUpperCase(); const bottom = (cover.bottom || '').toUpperCase();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+    const f = fitFont(ctx, top, W - 120, 3, 150, 80); const lh = f.size * 1.08; let y = 230;
+    if (cover.style === 'news') {
+      const bandH = f.lines.length * lh + 120; ctx.fillStyle = '#e8112d'; ctx.fillRect(0, 120, W, bandH);
+      ctx.fillStyle = '#fff'; ctx.font = '700 46px Figtree, Arial, sans-serif'; ctx.fillText('● FLASH INFO', W / 2, 165);
+      ctx.font = `${f.size}px Anton, Impact, 'Arial Black', sans-serif`; y = 230 + lh / 2;
+      f.lines.forEach((l, i) => { ctx.fillStyle = '#fff'; ctx.fillText(l, W / 2, y + i * lh); });
+    } else {
+      y = 200 + lh / 2;
+      f.lines.forEach((l, i) => {
+        const yy = y + i * lh;
+        if (cover.style === 'neon') { ctx.shadowColor = '#ff3d6e'; ctx.shadowBlur = 50; ctx.fillStyle = '#fff'; ctx.fillText(l, W / 2, yy); ctx.shadowBlur = 0; return; }
+        ctx.lineWidth = 22; ctx.strokeStyle = '#000'; ctx.strokeText(l, W / 2, yy);
+        ctx.fillStyle = cover.style === 'jaune' ? '#ffe600' : (i === f.lines.length - 1 && f.lines.length > 1 ? '#ff2d55' : '#fff');
+        if (cover.style === 'choc' && f.lines.length === 1) ctx.fillStyle = '#fff';
+        ctx.fillText(l, W / 2, yy);
+      });
+    }
+    const textBottom = y + (f.lines.length - 1) * lh + f.size / 2;
+    if (cover.emoji) { ctx.font = '200px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; ctx.save(); ctx.translate(W - 120, H - 560); ctx.rotate(0.18); ctx.fillText(cover.emoji, 0, 0); ctx.restore(); }
+    if (cover.arrow) {
+      ctx.save(); ctx.translate(250, textBottom + 260); ctx.rotate(0.55); ctx.strokeStyle = '#ff1f3d'; ctx.fillStyle = '#ff1f3d'; ctx.lineWidth = 34; ctx.lineCap = 'round';
+      ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 18;
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(260, 0); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(330, 0); ctx.lineTo(220, -80); ctx.lineTo(220, 80); ctx.closePath(); ctx.fill(); ctx.restore();
+    }
+    if (bottom) {
+      ctx.font = '110px Anton, Impact, "Arial Black", sans-serif'; const bw = Math.min(W - 120, ctx.measureText(bottom).width + 110); const bh = 170, by = H - 330;
+      ctx.save(); ctx.translate(W / 2, by); ctx.rotate(-0.03);
+      ctx.fillStyle = cover.style === 'jaune' ? '#ffe600' : (cover.style === 'news' ? '#000' : '#ff3d6e');
+      roundRect(ctx, -bw / 2, -bh / 2, bw, bh, 26); ctx.fill();
+      ctx.fillStyle = cover.style === 'jaune' ? '#000' : '#fff'; ctx.fillText(bottom, 0, 6); ctx.restore();
+    }
+    ctx.font = '700 40px Figtree, Arial, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.fillText('@dramafruit', W / 2, H - 110);
+  }
+  function roundRect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+  function downloadCover() {
+    const c = $('#coverCanvas');
+    try {
+      c.toBlob((blob) => {
+        if (!blob) { info($('#coverInfo'), 'Export impossible.'); return; }
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+        a.download = `couverture-${(cover.title || 'episode').toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'episode'}.png`;
+        document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+        toast('Couverture téléchargée.');
+      }, 'image/png');
+    } catch {
+      info($('#coverInfo'), 'Cette vidéo est hébergée ailleurs et ne peut pas être exportée telle quelle. Fais une capture d\'écran du bon moment et ajoute-la avec « Mon image ».');
+    }
+  }
+  function namesFromPlan(plan) { return plan && plan.cast ? { A: plan.cast[0] && plan.cast[0].name, B: plan.cast[1] && plan.cast[1].name } : {}; }
+
+  /* ---------- Compte : tableau de bord ---------- */
+  const FRUIT_AVATARS = ['🍓', '🍌', '🍇', '🍋', '🍑', '🍍', '🥝', '🍒', '🍉', '🥭'];
+  function demoAccount(email) {
+    const plan = state.offer.plans.pro;
+    return { email, admin: false, credits: 640, plan: 'pro', planName: plan.name, renewsAt: new Date(Date.now() + 18 * 864e5).toISOString(), perks: plan, subscription: true, demo: true };
+  }
+  function demoLibrary() {
+    const meta = [['L\'acte est notarié', 'grok-imagine-video-1.5', 15], ['Lâche Yanis', 'kling3.0_pro', 15], ['500 000 000 €', 'grok-imagine-video-1.5', 15], ['Change by midnight', 'seedance2_5', 12], ['Chef exécutif', 'veo3.1', 8]];
+    const now = Date.now();
+    return meta.map((m, k) => ({ id: `demo-${k + 1}`, title: m[0], model: m[1], duration: m[2], cost: Math.ceil((state.offer.modelCredits[m[1]] || 2) * m[2]), status: 'done', stored: true, outputUrl: `media/episode-${k + 1}.mp4`, poster: `media/episode-${k + 1}.jpg`, createdAt: new Date(now - (k * 26 + 3) * 36e5).toISOString() })).reverse()
+      .concat([{ id: 'demo-6', title: 'Le retour de l\'ex', model: 'grok-imagine-video-1.5-lite', duration: 8, cost: 8, status: 'running', createdAt: new Date(now - 6e4).toISOString() }]);
+  }
+  const DEMO_CHARS = [{ id: 'dc1', name: 'Fraise', image_data: 'media/clips/c5.jpg' }, { id: 'dc2', name: 'Raisin', image_data: 'media/clips/c6.jpg' }, { id: 'dc3', name: 'Poire', image_data: 'media/clips/c4.jpg' }];
+  function restoreDemoAccount() {
+    try { const e = localStorage.getItem('df_demo_me'); if (e) { state.me = demoAccount(e); state.library = demoLibrary(); state.characters = DEMO_CHARS.slice(); } } catch { /* indisponible */ }
+    renderNav();
+  }
+
+  function setAccTab(t, scroll) {
+    state.accTab = t;
+    $$('.acc-panel').forEach((p) => { p.hidden = p.dataset.panel !== t; });
+    $$('.dash-nav [data-acc-tab]').forEach((b) => b.setAttribute('aria-current', String(b.dataset.accTab === t)));
+    if (scroll) window.scrollTo(0, 0);
+  }
+  function libThumb(it) {
+    const st = { done: 'Prête', failed: 'Échec', running: 'En cours', queued: 'En file', creating: 'En file' }[it.status] || it.status;
+    const bg = it.poster ? ` style="background-image:url('${esc(it.poster)}')"` : '';
+    const media = it.outputUrl ? `<video src="${esc(it.outputUrl)}" ${it.poster ? `poster="${esc(it.poster)}"` : ''} muted loop playsinline preload="${it.poster ? 'none' : 'metadata'}" data-hover></video>` : `<div class="ph2">${it.status === 'failed' ? '⚠️' : '⏳'}</div>`;
+    return `<div class="vthumb"${bg}>${media}<span class="st ${esc(it.status)}">${esc(st)}</span></div>`;
+  }
+  function libCard(it) {
+    const admin = state.me && state.me.admin && it.status === 'done' && it.stored;
+    const adminRow = admin ? `<div class="feature-row"><button class="btn ${it.featured ? 'secondary' : ''} small" type="button" data-feature="${esc(it.id)}" data-on="${Boolean(it.featured)}">${it.featured ? '★ Retirer' : '☆ Accueil'}</button><input type="text" data-views="${esc(it.id)}" value="${esc(it.viewsLabel || '')}" placeholder="Vues (1,8 M)" aria-label="Compteur de vues affiché"></div>` : '';
+    const model = MODEL_LABELS[it.model] ? MODEL_LABELS[it.model].name : (it.model || '');
+    const acts = it.outputUrl ? `<div class="vact"><a class="btn small" href="${esc(it.outputUrl)}" target="_blank" rel="noopener">Voir</a><a class="btn secondary small" href="${esc(it.outputUrl)}" download>Télécharger</a><button class="btn secondary small" type="button" data-cover="${esc(it.id)}" style="flex-basis:100%">🖼️ Couverture</button></div>` : '';
+    return `<article class="vitem">${libThumb(it)}<div class="vmeta"><b>${esc(it.title || 'Épisode')}${it.featured ? ' <span class="lock">★</span>' : ''}</b><small>${new Date(it.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} · ${esc(model)} · ${it.duration} s · ${it.cost} cr</small>${acts}${adminRow}</div></article>`;
+  }
+  function renderLibrary() {
+    const f = state.libFilter || 'all';
+    const items = state.library.filter((it) => f === 'all' || (f === 'running' ? ['running', 'queued', 'creating'].includes(it.status) : it.status === f));
+    $('#libraryList').innerHTML = items.map(libCard).join('');
+    $('#libraryEmpty').hidden = items.length > 0;
+    $$('#libFilters button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.libFilter === f)));
+    const recent = state.library.filter((it) => it.status === 'done').slice(0, 4);
+    $('#acRecent').innerHTML = recent.map(libCard).join('');
+    $('#acRecentEmpty').hidden = recent.length > 0;
+  }
+  function renderAccount() {
+    const me = state.me;
+    if (!me) return;
+    const pk = me.perks;
+    const name = (me.email || '').split('@')[0] || 'toi';
+    let h = 0; for (const ch of me.email || '') h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    $('#acAvatar').textContent = FRUIT_AVATARS[h % FRUIT_AVATARS.length];
+    $('#acName').textContent = name;
+    $('#acEmail').textContent = `${me.email}${me.admin ? ' · admin' : ''}`;
+    $('#acEmail2').textContent = `Connecté avec ${me.email}`;
+    $('#accountTitle').textContent = `Bonjour, ${name}.`;
+    $('#acDate').textContent = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+    $('#demoAccNote').hidden = !me.demo;
+    const credits = me.admin ? '∞' : me.credits;
+    const quota = pk.monthlyCredits || pk.welcomeCredits || 0;
+    ['#acCredits', '#acCredits2', '#acCredits3'].forEach((s) => { $(s).textContent = credits; });
+    const of = quota ? `/ ${quota}${pk.monthlyCredits ? ' par mois' : ''}` : '';
+    $('#acCreditsOf').textContent = of; $('#acCreditsOf2').textContent = of;
+    const pct = me.admin ? 100 : (quota ? Math.min(100, Math.round(me.credits / quota * 100)) : 0);
+    $('#acMeter').style.width = `${pct}%`; $('#acMeter2').style.width = `${pct}%`;
+    const per = cost('grok-imagine-video-1.5-lite', 8, false) || 8;
+    $('#acCreditsHint').textContent = me.admin ? 'illimité' : `≈ ${Math.floor(me.credits / per)} épisode${Math.floor(me.credits / per) > 1 ? 's' : ''} de 8 s`;
+    [['#acPlanChip'], ['#acPlanChip2']].forEach(([s]) => { $(s).textContent = me.planName; $(s).classList.toggle('free', me.plan === 'free'); });
+    $('#acPlan').textContent = me.planName;
+    const renew = me.renewsAt ? new Date(me.renewsAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }) : '';
+    $('#acPlanSub').textContent = renew ? `renouvelée le ${renew}` : (me.plan === 'free' ? 'formule gratuite' : 'formule');
+    const plan = state.offer.plans[me.plan];
+    $('#acPlanPrice').innerHTML = plan && plan.price ? `${euro(plan.price)}<small> / mois</small>` : 'Gratuit';
+    $('#acRenew').textContent = renew ? `Prochain renouvellement le ${renew}, avec ${pk.monthlyCredits} nouveaux crédits.` : 'Passe à une formule payante pour recevoir des crédits chaque mois.';
+    const done = state.library.filter((it) => it.status === 'done');
+    $('#acCount').textContent = done.length; $('#acCountNav').textContent = state.library.length;
+    const secs = done.reduce((a, it) => a + (Number(it.duration) || 0), 0);
+    $('#acSeconds').textContent = `${secs} s de vidéo au total`;
+    const cmax = pk.characters;
+    $('#acChars').textContent = cmax > 0 ? `${state.characters.length}/${cmax}` : '–';
+    $('#acCharsSub').textContent = cmax > 0 ? 'personnages enregistrés' : 'avec Pro et Studio';
+    $('#acPerks').innerHTML = pk.perks.map((p) => `<li>${esc(p)}</li>`).join('');
+    $('#btnPortal').hidden = !me.subscription;
+    $('#charactersSub').textContent = cmax > 0 ? `Enregistre jusqu'à ${cmax} image${cmax > 1 ? 's' : ''} de personnage pour garder la même tête d'un épisode à l'autre.` : 'Garde la même tête d\'un épisode à l\'autre avec les formules Pro et Studio.';
+    $('#characterAdd').hidden = cmax <= 0; $('#characterAddActions').hidden = cmax <= 0; $('#charUpsell').hidden = cmax > 0;
+    $('#acPacks').innerHTML = Object.values(state.offer.packs).map((p) => `<div class="pack"><div><b>${esc(p.name)}</b><br><span>${euro(p.price)} · ne périment pas</span></div><button class="btn small" data-pack="${p.id}" type="button">Acheter</button></div>`).join('');
+    const prefs = loadPrefs();
+    $('#prefLang').value = prefs.lang || 'fr'; $('#prefDuration').value = String(prefs.duration || 8); $('#prefReview').checked = Boolean(prefs.review);
+    $('#prefOutro').innerHTML = OUTROS.filter((o) => o.id !== 'custom').map((o) => `<option value="${o.id}">${esc(o.label)}</option>`).join(''); $('#prefOutro').value = prefs.outro || 'like';
+    $('#visualsBox').hidden = !me.admin;
+    if (me.admin) renderVisuals();
+    renderLibrary();
+    setAccTab(state.accTab || 'overview');
+  }
+  function loadPrefs() { try { return JSON.parse(localStorage.getItem('df_prefs') || '{}') || {}; } catch { return {}; } }
+  function applyPrefs() { const p = loadPrefs(); if (p.lang) state.lang = p.lang; if (p.duration) state.duration = Number(p.duration); if (typeof p.review === 'boolean') state.review = p.review; if (p.outro) state.outro = p.outro; }
+  function renderVisuals() {
+    const imgs = state.decorImages || {};
+    $('#visualsList').innerHTML = DECORS.map((d) => imgs[d.id] ? `<figure class="decor"><img src="${esc(imgs[d.id])}" alt="${esc(d.name)}"><figcaption><b>${esc(d.name)}</b></figcaption></figure>` : '').join('');
+  }
+  async function generateVisuals() {
+    const btn = $('#btnVisuals'); btn.disabled = true; btn.textContent = 'Génération en cours (1 à 2 min)…';
+    info($('#visualsInfo'), '');
+    try {
+      const d = await api('/api/visuals', { method: 'POST', body: {} });
+      state.decorImages = d.images || {};
+      renderVisuals(); renderHome();
+      info($('#visualsInfo'), d.errors && d.errors.length ? `Terminé avec des erreurs : ${d.errors.join(' · ')}` : 'Visuels générés et publiés sur l\'accueil.');
+    } catch (e) { info($('#visualsInfo'), e.message); }
+    finally { btn.disabled = false; btn.textContent = 'Régénérer les visuels des décors'; }
+  }
+  async function loadLibrary() {
+    if (!state.me) return;
+    if (state.demo) { renderAccount(); return; }
+    try {
+      const d = await api('/api/library'); state.library = d.items || [];
+      renderAccount();
+    } catch (e) { $('#libraryEmpty').textContent = e.message; $('#libraryEmpty').hidden = false; }
+  }
+  function renderCharacters() {
+    $('#charactersList').innerHTML = state.characters.map((c) => `<div class="char-card"><img src="${esc(c.image_data)}" alt="${esc(c.name)}"><div>${esc(c.name)}</div><button class="del" type="button" data-del-char="${c.id}">retirer</button></div>`).join('') || '<p class="empty">Aucun personnage enregistré.</p>';
+  }
+  async function loadCharacters() {
+    if (!state.me) { $('#charactersList').innerHTML = ''; return; }
+    if (!state.demo) {
+      try { const d = await api('/api/characters'); state.characters = d.items || []; }
+      catch { state.characters = []; }
+    }
+    renderCharacters();
+    if (!$('#view-compte').hidden) renderAccount();
+  }
+
+  /* ---------- Connexion ---------- */
+  let authMode = 'login';
+  function setAuthMode(m) {
+    authMode = m;
+    $('#tabLogin').setAttribute('aria-selected', m === 'login'); $('#tabSignup').setAttribute('aria-selected', m === 'signup');
+    $('#btnAuth').textContent = m === 'login' ? 'Se connecter' : 'Créer mon compte';
+    $('#authSub').textContent = m === 'login' ? 'Retrouve tes crédits et ta vidéothèque.' : `Compte gratuit : ${state.offer.plans.free.welcomeCredits} crédits offerts pour ton premier épisode.`;
+    $('#authPassword').autocomplete = m === 'login' ? 'current-password' : 'new-password';
+    $('#btnForgot').hidden = m !== 'login';
+  }
+  async function submitAuth(e) {
+    e.preventDefault();
+    err($('#authError'), ''); info($('#authOk'), '');
+    const email = $('#authEmail').value.trim(); const password = $('#authPassword').value;
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err($('#authError'), 'Entre un e-mail valide.'); return; }
+    if (password.length < 8) { err($('#authError'), 'Mot de passe : 8 caractères minimum.'); return; }
+    if (state.demo) {
+      try { localStorage.setItem('df_demo_me', email); } catch { /* indisponible */ }
+      state.me = demoAccount(email); state.library = demoLibrary(); state.characters = DEMO_CHARS.slice(); state.accTab = 'overview';
+      renderNav(); go(afterLogin); toast('Compte de démonstration ouvert.');
+      return;
+    }
+    $('#btnAuth').disabled = true;
+    try {
+      const d = authMode === 'login' ? await auth.login(email, password) : await auth.signup(email, password);
+      if (d.access_token) { auth.set(d); await loadMe(); go(afterLogin); toast(authMode === 'login' ? 'Content de te revoir.' : 'Bienvenue ! Tes crédits t\'attendent.'); }
+      else { info($('#authOk'), 'Compte créé. Confirme ton e-mail (regarde ta boîte de réception), puis connecte-toi.'); setAuthMode('login'); }
+    } catch (ex) { err($('#authError'), ex.message); }
+    finally { $('#btnAuth').disabled = false; }
+  }
+
+  /* ---------- Divers ---------- */
+  function toast(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2200); }
+  async function copyText(text, okMsg) { try { await navigator.clipboard.writeText(text); toast(okMsg); } catch { toast('Copie impossible ici : sélectionne le texte à la main.'); } }
+
+  /* ---------- Événements ---------- */
+  function wire() {
+    window.addEventListener('hashchange', route);
+    $('#burger').addEventListener('click', () => { const open = $('#navLinks').classList.toggle('open'); $('#burger').setAttribute('aria-expanded', String(open)); });
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.nav')) { $('#navLinks').classList.remove('open'); $('#burger').setAttribute('aria-expanded', 'false'); }
+      else if (e.target.closest('#navLinks a')) { $('#navLinks').classList.remove('open'); $('#burger').setAttribute('aria-expanded', 'false'); }
+      const pe = e.target.closest('[data-play-ep]'); if (pe && !e.target.closest('.bgwall')) { selectEpisode(pe.dataset.playEp, true); return; }
+      const tt = e.target.closest('.reel-card[data-tt]'); if (tt) { tt.innerHTML = ttIframe(tt.dataset.tt); tt.removeAttribute('data-tt'); return; }
+      const snd = e.target.closest('button[data-sound]'); if (snd) { const v = snd.parentElement.querySelector('video'); if (v) { v.muted = !v.muted; snd.textContent = v.muted ? '🔇' : '🔊'; if (!v.muted) v.play().catch(() => {}); } return; }
+      const ft = e.target.closest('button[data-feature]'); if (ft) { toggleFeature(ft.dataset.feature, ft.dataset.on !== 'true'); return; }
+      const chip = e.target.closest('button[data-idea]'); if (chip) { state.idea = chip.dataset.idea; $('#idea').value = state.idea; if ($('#view-studio').hidden) go('studio'); else $('#idea').focus(); return; }
+      const ep = e.target.closest('.ep[data-ep]'); if (ep && !ep.classList.contains('open')) { ep.classList.add('open'); ep.innerHTML = ttIframe(ep.dataset.ep); return; }
+      const cv = e.target.closest('button[data-cover]'); if (cv) { const it = state.library.find((x) => x.id === cv.dataset.cover); if (it) openCover({ src: it.outputUrl, poster: it.poster, title: it.title, names: namesFromPlan(it.plan) }); return; }
+      const ch = e.target.closest('button[data-cover-hook]'); if (ch) { cover.top = ch.dataset.coverHook; $('#coverTop').value = cover.top; renderCoverStyles(); drawCover(); return; }
+      const cs = e.target.closest('button[data-cover-style]'); if (cs) { cover.style = cs.dataset.coverStyle; renderCoverStyles(); drawCover(); return; }
+      if (e.target.id === 'coverModal') { closeCover(); return; }
+      const oc = e.target.closest('#outroPick button[data-outro]'); if (oc) { state.outro = oc.dataset.outro; renderOutroPick(); if (state.outro === 'custom') $('#outroCustom').focus(); return; }
+      const dp = e.target.closest('#decorPick button[data-decor]'); if (dp) { state.setting = dp.dataset.decor; $$('#decorPick button').forEach((b) => b.setAttribute('aria-pressed', b === dp)); return; }
+      const pl = e.target.closest('button[data-plan]'); if (pl) { startCheckout('plan', pl.dataset.plan); return; }
+      const pk = e.target.closest('button[data-pack]'); if (pk) { startCheckout('pack', pk.dataset.pack); return; }
+      const po = e.target.closest('button[data-portal]'); if (po) { openPortal(); return; }
+      const at = e.target.closest('[data-acc-tab]'); if (at) { setAccTab(at.dataset.accTab, true); return; }
+      const lf = e.target.closest('button[data-lib-filter]'); if (lf) { state.libFilter = lf.dataset.libFilter; renderLibrary(); return; }
+      const dcd = e.target.closest('button[data-del-char]'); if (dcd && state.demo) { state.characters = state.characters.filter((c) => c.id !== dcd.dataset.delChar); renderCharacters(); renderAccount(); return; }
+      const dc = e.target.closest('button[data-del-char]'); if (dc) { api(`/api/characters?id=${encodeURIComponent(dc.dataset.delChar)}`, { method: 'DELETE' }).then(loadCharacters).catch((ex) => toast(ex.message)); return; }
+    });
+
+    document.addEventListener('change', (e) => { const inp = e.target.closest('input[data-views]'); if (inp) { const btn = inp.parentElement.querySelector('button[data-feature]'); toggleFeature(inp.dataset.views, btn ? btn.dataset.on === 'true' : true, inp.value); } });
+    $('#idea').addEventListener('input', (e) => { state.idea = e.target.value; });
+    $('#model').addEventListener('change', (e) => { state.model = e.target.value; renderStudio(); });
+    $('#duration').addEventListener('change', (e) => { state.duration = Number(e.target.value); renderDurationNote(); renderCost(); });
+    $('#lang').addEventListener('change', (e) => { state.lang = e.target.value; });
+    $('#outroCustom').addEventListener('input', (e) => { state.outroCustom = e.target.value; renderOutroPick(); e.target.focus(); });
+    $('#outroFormat').addEventListener('change', (e) => { state.outroFormat = e.target.value; renderOutroPick(); });
+    $('#hd').addEventListener('change', (e) => { state.hd = e.target.checked; renderCost(); });
+    $('#review').addEventListener('change', (e) => { state.review = e.target.checked; });
+    $('#character').addEventListener('change', (e) => { state.characterId = e.target.value; if (state.characterId) { state.image = null; $('#imagePreview').hidden = true; $('#btnImageClear').hidden = true; $('#image').value = ''; } });
+    $('#image').addEventListener('change', (e) => handleImageFile(e.target.files && e.target.files[0], (dataUrl) => { state.image = dataUrl; state.characterId = ''; $('#character').value = ''; const pv = $('#imagePreview'); pv.src = dataUrl; pv.hidden = false; $('#btnImageClear').hidden = false; }));
+    $('#btnImageClear').addEventListener('click', () => { state.image = null; $('#image').value = ''; $('#imagePreview').hidden = true; $('#btnImageClear').hidden = true; });
+    $('#btnCreate').addEventListener('click', createEpisode);
+    $('#btnShoot').addEventListener('click', async () => { if (state.busy) return; collectEditedLines(); state.busy = true; $('#reviewActions').hidden = true; renderPlan(false); try { await shoot(state.lastJob ? state.lastJob.id : null); } finally { state.busy = false; } });
+    $('#btnRewrite').addEventListener('click', () => improve(true));
+    $('#btnImprove').addEventListener('click', () => improve(false));
+    $('#viral').addEventListener('change', (e) => { state.viral = e.target.checked; renderCost(); });
+    $('#btnNew').addEventListener('click', () => { state.plan = null; state.lastJob = null; $('#studioRun').hidden = true; $('#idea').value = ''; state.idea = ''; $('#idea').focus(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+    $('#btnCover').addEventListener('click', () => { const j = state.lastJob || {}; const pl = j.plan || state.plan || {}; openCover({ src: j.outputUrl, title: j.title || pl.title, names: namesFromPlan(pl), bottom: pl.outro && pl.outro.type === 'like' ? 'PARTIE 1' : 'PARTIE 1' }); });
+    $('#epCover').addEventListener('click', () => { const t = ($('#epTitle').textContent || '').replace(/[«»]/g, '').trim(); const n = (($('#epVideo').getAttribute('src') || '').match(/episode-(\d+)/) || [])[1] || '1'; openCover({ src: `media/episode-${n}.mp4`, poster: `media/episode-${n}.jpg`, title: t }); });
+    $('#coverClose').addEventListener('click', closeCover);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#coverModal').hidden) closeCover(); });
+    $('#coverTime').addEventListener('input', (e) => { cover.img = null; const v = $('#coverVideo'); if (v.readyState >= 1) v.currentTime = Number(e.target.value); });
+    $('#coverShuffle').addEventListener('click', () => { const v = $('#coverVideo'); if (v.readyState >= 1 && v.duration) { cover.img = null; const t = Math.random() * (v.duration - 0.2); $('#coverTime').value = String(t); v.currentTime = t; } });
+    $('#coverUpload').addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; if (!f) return; const img = new Image(); img.onload = () => { cover.img = img; drawCover(); }; img.src = URL.createObjectURL(f); info($('#coverInfo'), ''); });
+    $('#coverTop').addEventListener('input', (e) => { cover.top = e.target.value; renderCoverStyles(); drawCover(); });
+    $('#coverBottom').addEventListener('input', (e) => { cover.bottom = e.target.value; drawCover(); });
+    $('#coverEmoji').addEventListener('change', (e) => { cover.emoji = e.target.value; drawCover(); });
+    $('#coverArrow').addEventListener('change', (e) => { cover.arrow = e.target.checked; drawCover(); });
+    $('#coverZoom').addEventListener('change', (e) => { cover.zoom = e.target.checked; drawCover(); });
+    $('#coverDownload').addEventListener('click', downloadCover);
+    $('#coverCopy').addEventListener('click', () => copyText(cover.top, 'Accroche copiée.'));
+    if (document.fonts && document.fonts.load) document.fonts.load('100px Anton').then(() => { if (!$('#coverModal').hidden) drawCover(); }).catch(() => {});
+    $('#btnCopyCaption').addEventListener('click', () => copyText($('#captionBox').textContent, 'Légende copiée.'));
+
+    $('#btnPortal').addEventListener('click', () => openPortal());
+    $('#btnVisuals').addEventListener('click', generateVisuals);
+    const doLogout = async () => { await auth.logout(); try { localStorage.removeItem('df_demo_me'); } catch { /* indisponible */ } state.me = null; state.library = []; state.characters = []; state.accTab = 'overview'; renderNav(); go('accueil'); toast('À bientôt.'); };
+    $('#btnLogout').addEventListener('click', doLogout);
+    $$('[data-logout]').forEach((b) => b.addEventListener('click', doLogout));
+    $('#quickForm').addEventListener('submit', (e) => { e.preventDefault(); const v = $('#quickIdea').value.trim(); if (v) { state.idea = v; $('#idea').value = v; } $('#quickIdea').value = ''; go('studio'); });
+    $('#btnPrefs').addEventListener('click', () => { const p = { lang: $('#prefLang').value, duration: Number($('#prefDuration').value), review: $('#prefReview').checked, outro: $('#prefOutro').value }; try { localStorage.setItem('df_prefs', JSON.stringify(p)); } catch { /* indisponible */ } applyPrefs(); toast('Préférences enregistrées.'); });
+    $('#btnResetPw').addEventListener('click', async () => { if (!state.me) return; if (state.demo) { toast('Démo : l\'e-mail de réinitialisation part une fois le site en ligne.'); return; } try { await auth.recover(state.me.email); toast('E-mail envoyé pour changer le mot de passe.'); } catch (e) { toast(e.message); } });
+    document.addEventListener('mouseover', (e) => { const v = e.target.closest('.vthumb video[data-hover]'); if (v && v.paused) { v.preload = 'auto'; v.play().catch(() => {}); } });
+    document.addEventListener('mouseout', (e) => { const v = e.target.closest('.vthumb video[data-hover]'); if (v && !v.contains(e.relatedTarget)) v.pause(); });
+    $('#btnCharAdd').addEventListener('click', () => {
+      const name = $('#charName').value.trim(); const file = $('#charImage').files && $('#charImage').files[0];
+      err($('#charError'), '');
+      if (!name || !file) { err($('#charError'), 'Donne un nom et choisis une image.'); return; }
+      handleImageFile(file, async (dataUrl) => {
+        if (state.demo) { state.characters.push({ id: `dc${Date.now()}`, name, image_data: dataUrl }); $('#charName').value = ''; $('#charImage').value = ''; renderCharacters(); renderAccount(); toast('Personnage enregistré (démo).'); return; }
+        try { await api('/api/characters', { method: 'POST', body: { name, imageDataUrl: dataUrl } }); $('#charName').value = ''; $('#charImage').value = ''; await loadCharacters(); toast('Personnage enregistré.'); }
+        catch (e) { err($('#charError'), e.message); }
+      });
+    });
+
+    $('#tabLogin').addEventListener('click', () => setAuthMode('login'));
+    $('#tabSignup').addEventListener('click', () => setAuthMode('signup'));
+    $('#authForm').addEventListener('submit', submitAuth);
+    $('#btnForgot').addEventListener('click', async () => {
+      const email = $('#authEmail').value.trim(); err($('#authError'), '');
+      if (!email) { err($('#authError'), 'Entre ton e-mail, puis clique à nouveau.'); return; }
+      if (state.demo) { err($('#authError'), 'Aperçu : indisponible.'); return; }
+      try { await auth.recover(email); info($('#authOk'), 'E-mail envoyé : suis le lien pour choisir un nouveau mot de passe.'); } catch (e) { err($('#authError'), e.message); }
+    });
+    $('#btnGoogle').addEventListener('click', () => auth.google());
+  }
+
+  /* ---------- Démarrage ---------- */
+  async function start() {
+    auth.load();
+    renderEpisodes();
+    renderVideoWall();
+    setupAutoplay();
+    renderHome();
+    renderPlans($('#homePlans'));
+    wire();
+    await loadConfig();
+    loadShowcase();
+    applyPrefs();
+    if (!state.demo) { await loadMe(); if (state.me && state.me.perks.characters > 0) await loadCharacters(); }
+    else restoreDemoAccount();
+    renderPlans($('#homePlans'));
+    setAuthMode('login');
+    route();
+  }
+  start();
+})();
+</script>
+</body>
+</html>
