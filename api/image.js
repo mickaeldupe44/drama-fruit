@@ -1,6 +1,7 @@
 import { env, send, body, requireAuth } from '../lib/common.js';
 import { openaiGenerate, openaiEdit } from '../lib/openai.js';
 import { generateImage, editImages } from '../lib/xai.js';
+import { sheetPrompt, lieuPrompt, objetPrompt, scenePrompt } from '../lib/pack.js';
 
 // Une image à la fois (personnage, décor ou 1re image), pour rester sous les limites de temps et de taille.
 const LOOK = 'Ultra-detailed high-end 3D animated film render, glossy realistic fruit textures, cinematic lighting, rich saturated colors, sharp focus, viral TikTok fruit-drama style.';
@@ -28,7 +29,23 @@ export default async function handler(req, res) {
   const gen = (prompt, portrait) => (useOpenAI ? openaiGenerate(prompt, '1024x1536') : generateImage(prompt, portrait ? '2:3' : '9:16'));
   try {
     let url;
-    if (b.kind === 'char') {
+    const pack = b.pack;
+    const edit = (urls, prompt, portrait) => (useOpenAI ? openaiEdit(urls, prompt, portrait === 'wide' ? '1536x1024' : '1024x1536') : editImages(urls, prompt, portrait === 'wide' ? '3:2' : '9:16'));
+    if (pack && b.kind === 'sheet') {
+      const pp = (pack.persos || [])[Number(b.index) || 0]; if (!pp) return send(res, 400, { error: 'Personnage inconnu.' });
+      url = useOpenAI ? await openaiGenerate(sheetPrompt(pp), '1536x1024') : await generateImage(sheetPrompt(pp), '3:2');
+    } else if (pack && b.kind === 'lieu') {
+      const l = (pack.lieux || [])[Number(b.index) || 0]; if (!l) return send(res, 400, { error: 'Lieu inconnu.' });
+      url = await gen(lieuPrompt(l), false);
+    } else if (pack && b.kind === 'objet') {
+      const o = (pack.objets || [])[Number(b.index) || 0]; if (!o) return send(res, 400, { error: 'Objet inconnu.' });
+      url = useOpenAI ? await openaiGenerate(objetPrompt(o), '1024x1024') : await generateImage(objetPrompt(o), '1:1');
+    } else if (pack && b.kind === 'scene') {
+      const i = Number(b.index) || 0; if (!pack.scenes || !pack.scenes[i]) return send(res, 400, { error: 'Scène inconnue.' });
+      const refs = (Array.isArray(b.refs) ? b.refs : []).filter((r) => r && typeof r.url === 'string').slice(0, 6);
+      const labels = refs.map((r, k) => `image ${k + 1} = ${r.label}`);
+      url = refs.length ? await edit(refs.map((r) => r.url), scenePrompt(pack, i, labels)) : await gen(scenePrompt(pack, i, []), false);
+    } else if (b.kind === 'char') {
       const c = (p.cast || [])[Number(b.index) || 0]; if (!c) return send(res, 400, { error: 'Personnage inconnu.' });
       url = await gen(charPrompt(c), true);
     } else if (b.kind === 'back') {
@@ -50,6 +67,7 @@ export default async function handler(req, res) {
     send(res, 200, { url, provider: useOpenAI ? 'openai' : 'xai' });
   } catch (e) {
     console.error('image', b.kind, e);
-    send(res, 502, { error: `Image non créée : ${e.message || e}` });
+    const busy = /rate limit|too many|429/i.test(String(e.message));
+    send(res, busy ? 429 : 502, { error: busy ? 'Trop d\'images demandées d\'un coup, nouvel essai…' : `Image non créée : ${e.message || e}`, code: busy ? 'rate_limited' : 'image_failed' });
   }
 }
