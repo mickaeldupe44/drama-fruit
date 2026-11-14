@@ -3,12 +3,17 @@ import { openaiGenerate, openaiEdit } from '../lib/openai.js';
 import { generateImage, editImages } from '../lib/xai.js';
 
 // Une image à la fois (personnage, décor ou 1re image), pour rester sous les limites de temps et de taille.
-const LOOK = 'Gorgeous high-end 3D animated feature film style (Pixar / DreamWorks quality), appealing and beautiful character design, soft cinematic lighting, rich saturated colors, glossy detailed textures, shallow depth of field.';
+const LOOK = 'Ultra-detailed high-end 3D animated film render, glossy realistic fruit textures, cinematic lighting, rich saturated colors, sharp focus, viral TikTok fruit-drama style.';
+const BIBLE = 'Anthropomorphic fruit character with a HUMAN BODY: a glossy realistic fruit as the head (stem, leaves, fruit skin texture) with a very expressive cartoon face (big shiny eyes, strong eyebrows, expressive mouth) and styled human hair, normal human body wearing real clothes, human hands.';
 
-export const planSets = (p) => (Array.isArray(p.sets) && p.sets.length ? p.sets : [{ id: 's1', name: 'Décor', prompt: p.settingPrompt || p.setting || 'dramatic kitchen at night' }]).slice(0, 3);
+export const planSets = (p) => (Array.isArray(p.sets) && p.sets.length ? p.sets : [{ id: 's1', name: 'Décor', prompt: p.settingPrompt || p.setting || 'dramatic kitchen at night' }]).slice(0, 4);
 
+const priceTag = (c) => (c.price ? ` A glowing golden LED price badge is attached on the forehead, clearly displaying "${c.price}".` : '');
 function charPrompt(c) {
-  return `${LOOK} Character portrait of ONE charming anthropomorphic fruit character named ${c.name}: a ${c.fruit} with a beautiful expressive cartoon face (large sparkling eyes, long lashes or bold brows, expressive mouth), elegant small arms and legs. ${c.imagePrompt || c.look || ''} Full body, three-quarter view, confident pose, clean soft gradient studio background, no text, no watermark.`;
+  return `${LOOK} ${BIBLE} Character reference sheet, FRONT VIEW, full body standing, of ONE character named ${c.name}: a ${c.fruit}. ${c.imagePrompt || c.look || ''}${priceTag(c)} Plain light grey studio background, centered, whole body visible from head to shoes, no other characters, no text except the price badge.`;
+}
+function backPrompt(c) {
+  return `${LOOK} The exact same character as in the reference image (${c.name}, a ${c.fruit}), now seen FROM BEHIND (back view), full body standing, same hair, same stem, same clothes and colors. ${c.backPrompt || ''} Plain light grey studio background, whole body visible, no other characters, no text.`;
 }
 function setPrompt(s) {
   return `${LOOK} Empty movie set, no characters, vertical 9:16 composition: ${s.prompt || s.name}. Beautifully art-directed, detailed props, atmospheric light, depth, room for characters in the foreground, no text.`;
@@ -26,6 +31,11 @@ export default async function handler(req, res) {
     if (b.kind === 'char') {
       const c = (p.cast || [])[Number(b.index) || 0]; if (!c) return send(res, 400, { error: 'Personnage inconnu.' });
       url = await gen(charPrompt(c), true);
+    } else if (b.kind === 'back') {
+      const c = (p.cast || [])[Number(b.index) || 0]; if (!c) return send(res, 400, { error: 'Personnage inconnu.' });
+      const front = b.refs && b.refs[0] && b.refs[0].url;
+      if (!front) return send(res, 400, { error: 'Image de face manquante.' });
+      url = useOpenAI ? await openaiEdit([front], backPrompt(c), '1024x1536') : await editImages([front], backPrompt(c), '2:3');
     } else if (b.kind === 'set') {
       const s = planSets(p)[Number(b.index) || 0]; if (!s) return send(res, 400, { error: 'Décor inconnu.' });
       url = await gen(setPrompt(s), false);
@@ -34,7 +44,7 @@ export default async function handler(req, res) {
       if (!refs.length) return send(res, 400, { error: 'Aucune image de référence.' });
       const first = (p.shots && p.shots[0]) || {};
       const desc = refs.map((r, i) => `image ${i + 1} is ${r.label}`).join(', ');
-      const prompt = `${LOOK} Opening frame of a vertical 9:16 soap-opera episode. Use the reference images: ${desc}. Place the characters inside the set, keeping each character's exact design, colors and accessories. Scene: ${first.videoPrompt || first.visual || p.logline || ''} Dramatic, beautiful cinematic composition, characters clearly visible and acting, no text.`;
+      const prompt = `${LOOK} ${BIBLE} Opening frame of a vertical 9:16 soap-opera episode. Use the reference images: ${desc}. Place the characters inside the set, keeping each character's exact design, hair, clothes, colors and forehead price badge. Scene: ${first.videoPrompt || first.visual || p.logline || ''} Dramatic, beautiful cinematic composition, characters clearly visible and acting, no text.`;
       url = useOpenAI ? await openaiEdit(refs.map((r) => r.url), prompt, '1024x1536') : await editImages(refs.map((r) => r.url), prompt, '9:16');
     } else return send(res, 400, { error: 'Type d\'image inconnu.' });
     send(res, 200, { url, provider: useOpenAI ? 'openai' : 'xai' });

@@ -2,7 +2,7 @@ import { env, send, body, requireAuth, encodeJob, XAI_NATIVE_MAX, xaiModel } fro
 
 // Étape 3 : Grok tourne la vidéo. Les images du casting et du décor servent de références,
 // et la première image (tout le monde en place) sert de point de départ.
-const STYLE = 'Vertical 9:16 video. High-end 3D animated soap-opera drama starring anthropomorphic fruit characters with expressive faces, eyes, mouths and small arms. Cinematic lighting, dramatic close-ups, lip-synced dialogue with natural voices.';
+const STYLE = 'Vertical 9:16 video. Ultra-detailed 3D animated soap-opera drama. The characters are anthropomorphic fruits with human bodies: glossy realistic fruit heads with very expressive cartoon faces and human hair, human bodies in real clothes, a glowing golden price badge on the forehead. Cinematic lighting, dramatic camera moves and close-ups, exaggerated emotions, lip-synced dialogue with natural expressive voices.';
 
 function segmentsOf(plan, duration) {
   const n = Math.max(1, Math.ceil(duration / XAI_NATIVE_MAX));
@@ -18,7 +18,7 @@ const isImg = (u) => typeof u === 'string' && (/^https:\/\//.test(u) || u.starts
 function promptFor(plan, seg, lang, refMap) {
   const cast = (plan.cast || []).map((c) => `${c.name} (a ${c.fruit}${c.look ? ', ' + c.look : ''})`).join('; ');
   const parts = [STYLE];
-  if (refMap.length) parts.push('References: ' + refMap.map((r) => `${r.label} is ${r.tag}`).join('; ') + '. Keep every character and the set exactly as in their reference images.');
+  if (refMap.length) parts.push('References: ' + refMap.map((r) => `${r.label} is ${r.tag}`).join('; ') + '. Keep every character (face, hair, clothes, price badge) and every set exactly as in their reference images.');
   else if (cast) parts.push(`Characters: ${cast}.`);
   if (!refMap.some((r) => r.isSet) && plan.setting) parts.push(`Setting: ${plan.settingPrompt || plan.setting}.`);
   if (seg.total > 1) parts.push(`This is part ${seg.index + 1} of ${seg.total} of the same continuous episode.`);
@@ -44,11 +44,13 @@ export default async function handler(req, res) {
   const userImage = typeof b.imageDataUrl === 'string' && b.imageDataUrl.startsWith('data:image/') ? b.imageDataUrl : null;
   const firstFrame = userImage || (isImg(assets.keyframe) ? assets.keyframe : null);
   const sets = (Array.isArray(assets.sets) && assets.sets.length ? assets.sets : (isImg(assets.decor) ? [{ id: 's1', name: 'main', url: assets.decor }] : [])).filter((x) => isImg(x.url));
-  const charRefs = (assets.characters || []).filter((c) => isImg(c.url)).map((c) => ({ url: c.url, label: c.name }));
+  const charRefs = (assets.characters || []).filter((c) => isImg(c.url)).flatMap((c) => [{ url: c.url, label: `${c.name} (front view)` }].concat(isImg(c.back) ? [{ url: c.back, label: `${c.name} (back view)` }] : []));
   const refsFor = (seg) => {
     const ids = new Set(seg.shots.map((x) => x.set).filter(Boolean));
+    const names = new Set(seg.shots.flatMap((x) => (Array.isArray(x.characters) ? x.characters : []).concat((x.dialogue || []).map((l) => l.who))));
     const used = sets.filter((x) => ids.has(x.id));
-    return [...(used.length ? used : sets).map((x) => ({ url: x.url, label: `the "${x.name}" set`, isSet: true, setId: x.id })), ...charRefs];
+    const chars = names.size ? charRefs.filter((r) => names.has(r.label.replace(/ \((front|back) view\)$/, ''))) : charRefs;
+    return [...(used.length ? used : sets).map((x) => ({ url: x.url, label: `the "${x.name}" set`, isSet: true, setId: x.id })), ...(chars.length ? chars : charRefs)];
   };
   const segs = segmentsOf(plan, duration);
   try {
