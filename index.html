@@ -570,6 +570,15 @@ footer a { color: var(--muted); }
 .idea-row small { color: var(--muted); }
 #idea.flash { animation: ideaFlash .5s ease; }
 @keyframes ideaFlash { 0% { box-shadow: 0 0 0 3px rgba(255,61,110,.55); } 100% { box-shadow: 0 0 0 0 rgba(255,61,110,0); } }
+.asset-box { margin: 14px 0; padding: 14px; border: 1px solid var(--line); border-radius: 18px; background: var(--panel-2); }
+.asset-head { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.asset-head small { color: var(--muted); }
+.asset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
+.asset-grid figure { margin: 0; position: relative; border-radius: 14px; overflow: hidden; background: #000; aspect-ratio: 2 / 3; border: 1px solid var(--line); }
+.asset-grid figure.wide { aspect-ratio: 9 / 16; }
+.asset-grid img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.asset-grid figcaption { position: absolute; left: 0; right: 0; bottom: 0; padding: 18px 8px 6px; font-size: 12px; font-weight: 700; color: #fff; background: linear-gradient(transparent, rgba(0,0,0,.8)); }
+.asset-grid .ph { display: grid; place-items: center; height: 100%; color: var(--muted); font-size: 12px; text-align: center; padding: 8px; }
 .wrap { max-width: 1200px; }
 .view:not(#view-accueil) { max-width: 960px; margin-left: auto; margin-right: auto; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } html { scroll-behavior: auto; } .decor:hover img { transform: none; } }
@@ -898,6 +907,7 @@ footer a { color: var(--muted); }
       <div class="plan-logline" id="planLogline"></div>
       <div class="viral-box" id="viralBox" hidden></div>
       <div class="cast-row" id="planCast"></div>
+      <div class="asset-box" id="assetBox" hidden><div class="asset-head"><b>🎨 Casting et décor créés par Grok</b><small id="assetNote"></small></div><div class="asset-grid" id="assetGrid"></div></div>
       <div class="shots" id="planShots"></div>
       <div class="actions" id="reviewActions" hidden>
         <button class="btn" id="btnShoot" type="button">Tourner cet épisode</button>
@@ -1689,6 +1699,13 @@ footer a { color: var(--muted); }
   function info(el, msg) { el.textContent = msg; el.hidden = !msg; }
 
   function seatAvatar(c) { return `<span style="font-size:19px">${FRUIT_EMOJI[(c.fruit || '').toLowerCase()] || '🍈'}</span>`; }
+  function renderAssets() {
+    const a = state.assets; if (!a) { $('#assetBox').hidden = true; return; }
+    const fig = (url, label, wide) => `<figure class="${wide ? 'wide' : ''}">${url ? `<img src="${esc(url)}" alt="${esc(label)}" loading="lazy">` : '<div class="ph">—</div>'}<figcaption>${esc(label)}</figcaption></figure>`;
+    $('#assetGrid').innerHTML = (a.characters || []).map((c) => fig(c.url, c.name)).join('') + fig(a.decor, 'Décor', true) + (a.keyframe ? fig(a.keyframe, '1re image', true) : '');
+    $('#assetNote').textContent = a.keyframe ? 'Grok tourne la vidéo à partir de ces images.' : 'Grok s\'en sert comme références.';
+    $('#assetBox').hidden = false;
+  }
   function renderPlan(editable) {
     const p = state.plan; if (!p) return;
     $('#planBox').hidden = false;
@@ -1766,7 +1783,7 @@ footer a { color: var(--muted); }
     setStage(1); showProgress(0, 'Le réalisateur écrit le scénario…', true);
     try {
       if (state.viral) showProgress(0, 'Le réalisateur écrit le scénario, puis l\'IA le booste…', true);
-      state.plan = await writePlan(state.viral ? { viral: true } : undefined);
+      state.plan = await writePlan(state.viral ? { viral: true } : undefined); state.assets = null; $('#assetBox').hidden = true;
       state.lastJob = null;
       if (state.review) { hideProgress(); $('#runStatus').textContent = 'Relis, corrige une réplique si tu veux, puis tourne.'; renderPlan(true); }
       else { renderPlan(false); await shoot(null); }
@@ -1788,11 +1805,20 @@ footer a { color: var(--muted); }
       return;
     }
     if (!state.cfg.ready.runway && !state.cfg.ready.xai) { hideProgress(); err($('#runError'), 'Clé vidéo manquante sur le serveur.'); return; }
+    if (state.cfg.ready.images && !state.assets && !state.image && !state.characterId) {
+      setStage(2); showProgress(0, 'Grok dessine les personnages et le décor…', true);
+      $('#runStatus').textContent = 'Création des images du casting et du décor (30 à 60 s)…';
+      $('#assetBox').hidden = false; $('#assetNote').textContent = 'en cours…';
+      $('#assetGrid').innerHTML = state.plan.cast.slice(0, 4).map((c) => `<figure><div class="ph">${esc(c.name)}<br>⏳</div></figure>`).join('') + '<figure class="wide"><div class="ph">Décor<br>⏳</div></figure>';
+      try { state.assets = await api('/api/assets', { method: 'POST', body: { plan: state.plan } }); renderAssets(); }
+      catch (e) { if (e.code === 'unauthorized') throw e; $('#assetBox').hidden = true; toast('Images non créées, tournage sans elles.'); }
+    }
     setStage(2); showProgress(0, 'Envoi au plateau…', true);
     $('#resultBox').hidden = false; $('#screenIdle').hidden = false; $('#screenText').textContent = 'Plateau en place, tournage en cours…';
     const old = $('#screen video'); if (old) old.remove();
     const body = { plan: state.plan, outro: state.plan.outro || null, model: state.model, duration: state.duration, hd: state.hd, lang: state.lang, parentJobId: parentJobId || undefined };
     if (state.characterId) body.characterId = state.characterId; else if (state.image) body.imageDataUrl = state.image;
+    if (state.assets) body.assets = state.assets;
     let d;
     try { d = await api('/api/generate', { method: 'POST', body }); }
     catch (e) {
@@ -1860,7 +1886,7 @@ footer a { color: var(--muted); }
     $('#resultBox').hidden = true; setStage(1); showProgress(0, 'L\'IA rend ton épisode plus viral…', true);
     try {
       const jobId = state.lastJob ? state.lastJob.id : undefined;
-      state.plan = await writePlan({ previousPlan: state.plan, feedback: fb, jobId, viral: true });
+      state.plan = await writePlan({ previousPlan: state.plan, feedback: fb, jobId, viral: true }); state.assets = null; $('#assetBox').hidden = true;
       if (!fromReview) $('#feedback').value = '';
       hideProgress();
       $('#runStatus').textContent = `Version améliorée (${improveCost()} crédits). Relis, corrige si tu veux, puis tourne.`;
