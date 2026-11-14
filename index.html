@@ -566,6 +566,10 @@ footer a { color: var(--muted); }
 .viral-box b { color: var(--ok); }
 .viral-box ul { margin: 6px 0 0; padding-left: 18px; color: var(--ink); }
 
+.idea-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.idea-row small { color: var(--muted); }
+#idea.flash { animation: ideaFlash .5s ease; }
+@keyframes ideaFlash { 0% { box-shadow: 0 0 0 3px rgba(255,61,110,.55); } 100% { box-shadow: 0 0 0 0 rgba(255,61,110,0); } }
 .wrap { max-width: 1200px; }
 .view:not(#view-accueil) { max-width: 960px; margin-left: auto; margin-right: auto; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } html { scroll-behavior: auto; } .decor:hover img { transform: none; } }
@@ -822,6 +826,7 @@ footer a { color: var(--muted); }
   <div class="card" id="studioForm">
     <label class="field" for="idea">L'idée de l'épisode</label>
     <textarea id="idea" maxlength="800" placeholder="Ex. : Dans la villa, l'ex de Banane débarque pendant la cérémonie. Fraise explose, Citron filme tout."></textarea>
+    <div class="idea-row"><button class="btn secondary small" id="btnIdea" type="button">🎲 Donne-moi une idée</button><small id="ideaHint">Appuie encore pour en changer.</small></div>
     <div class="chips" id="ideaChips"></div>
 
     <label class="field" id="l-decor">Décor</label>
@@ -1238,6 +1243,41 @@ footer a { color: var(--muted); }
     'Citron trouve un message suspect sur le téléphone d\'Ananas : « Ma pêche à moi ».',
     'Qui a mangé le dernier biscuit ? Pomme mène l\'enquête, Banane a des miettes sur le chapeau.',
   ];
+  const IDEA_FRUITS = ['Fraise', 'Banane', 'Citron', 'Kiwi', 'Pêche', 'Ananas', 'Pomme', 'Raisin', 'Poire', 'Mangue', 'Cerise', 'Orange', 'Myrtille', 'Pastèque', 'Avocat', 'Framboise'];
+  const IDEA_TEMPLATES = [
+    '{A} découvre que {B} la trompe avec {C} en plein mariage. Elle prend le micro devant tous les invités.',
+    '{A} gagne 500 000 € au loto. Le soir même, {B}, son ex, sonne à la porte avec des fleurs.',
+    '{A} est enfermé dans le frigo depuis 3 jours. Seul {B} a la clé, et il refuse d\'ouvrir.',
+    'Au dîner de famille, {A} annonce qu\'il quitte la corbeille pour {B}. Mamie {C} s\'étouffe.',
+    '{A} trouve un message de {B} sur le téléphone de {C} : « Elle ne doit jamais savoir. »',
+    '{A} est accusé d\'avoir volé le dernier yaourt. {B} a des preuves, mais elles sont fausses.',
+    'Pendant l\'émission de télé-réalité, {A} découvre que {B} joue un rôle depuis le début.',
+    '{A} rentre plus tôt du travail et trouve {B} en train de vider leur compte en banque avec {C}.',
+    '{A} devait épouser {B}, mais le jour J c\'est {C} qui l\'attend devant l\'autel.',
+    'Le test ADN tombe : {A} n\'est pas le vrai fils de {B}. Le vrai père est assis à table.',
+    '{A} se fait humilier au lycée par {B}. Dix ans plus tard, {A} devient son patron.',
+    '{A} reçoit une lettre anonyme : « Je sais ce que tu as fait au marché. » {B} sourit au fond de la salle.',
+    'Interrogatoire : {A} jure qu\'il était au frigo cette nuit-là. {B}, l\'inspecteur, sort une photo.',
+    '{A} vend la maison de famille sans prévenir {B}. Les déménageurs arrivent pendant le goûter d\'anniversaire.',
+    '{A} se fait passer pour riche pour séduire {B}. {C}, son colocataire, menace de tout révéler.',
+    '{A} est élu fruit de l\'année. Pendant la remise du prix, {B} projette une vidéo compromettante.',
+    'Le jour de la cueillette, {A} apprend qu\'il sera mis en compote. {B} a signé l\'ordre.',
+    '{A} découvre que sa meilleure amie {B} a un compte secret où elle se moque d\'elle.',
+    '{A} quitte {B} par message vocal en direct à la radio. {B} est au standard.',
+    'Dans la villa, {A} doit choisir entre {B} et {C}. Celui qui n\'est pas choisi part à la poubelle.',
+    '{A} rend visite à {B} à l\'hôpital et tombe sur {C} avec la bague de fiançailles.',
+    '{A} hérite de toute la plantation. {B} et {C} contestent le testament devant le notaire.',
+    '{A} a menti sur son âge : il est périmé depuis une semaine. {B} vient de le découvrir.',
+    'Coupure de courant au supermarché : quand la lumière revient, {A} a disparu et {B} tient son chapeau.',
+  ];
+  let lastIdea = -1;
+  function randomIdea() {
+    let k; do { k = Math.floor(Math.random() * IDEA_TEMPLATES.length); } while (k === lastIdea && IDEA_TEMPLATES.length > 1);
+    lastIdea = k;
+    const pool = IDEA_FRUITS.slice(); const pick = () => pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
+    const A = pick(), B = pick(), C = pick();
+    return IDEA_TEMPLATES[k].replace(/\{A\}/g, A).replace(/\{B\}/g, B).replace(/\{C\}/g, C);
+  }
   const DECORS = [
     { id: 'cuisine', name: 'Cuisine noire', mood: 'Ampoule nue, pluie, table en bois', en: 'dark rustic farmhouse kitchen at night, single warm bulb, scarred wooden table, rain on the window' },
     { id: 'frigo', name: 'Frigo n°7', mood: 'Néon froid, givre, ruban de police', en: 'inside an old humming refrigerator at night, cold blue neon light, frost on the shelves, police tape' },
@@ -2207,6 +2247,7 @@ footer a { color: var(--muted); }
       const tt = e.target.closest('.reel-card[data-tt]'); if (tt) { tt.innerHTML = ttIframe(tt.dataset.tt); tt.removeAttribute('data-tt'); return; }
       const snd = e.target.closest('button[data-sound]'); if (snd) { const v = snd.parentElement.querySelector('video'); if (v) { v.muted = !v.muted; snd.textContent = v.muted ? '🔇' : '🔊'; if (!v.muted) v.play().catch(() => {}); } return; }
       const ft = e.target.closest('button[data-feature]'); if (ft) { toggleFeature(ft.dataset.feature, ft.dataset.on !== 'true'); return; }
+      if (e.target.closest('#btnIdea')) { state.idea = randomIdea(); const ta = $('#idea'); ta.value = state.idea; ta.classList.remove('flash'); void ta.offsetWidth; ta.classList.add('flash'); return; }
       const chip = e.target.closest('button[data-idea]'); if (chip) { state.idea = chip.dataset.idea; $('#idea').value = state.idea; if ($('#view-studio').hidden) go('studio'); else $('#idea').focus(); return; }
       const ep = e.target.closest('.ep[data-ep]'); if (ep && !ep.classList.contains('open')) { ep.classList.add('open'); ep.innerHTML = ttIframe(ep.dataset.ep); return; }
       const cv = e.target.closest('button[data-cover]'); if (cv) { const it = state.library.find((x) => x.id === cv.dataset.cover); if (it) openCover({ src: it.outputUrl, poster: it.poster, title: it.title, names: namesFromPlan(it.plan) }); return; }
