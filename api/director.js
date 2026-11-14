@@ -15,8 +15,11 @@ La somme des "seconds" doit être exactement égale à la durée demandée. Chaq
 export default async function handler(req, res) {
   if (req.method !== 'POST') return send(res, 405, { error: 'POST attendu.' });
   if (!requireAuth(req, res)) return;
-  const key = env('OPENAI_API_KEY');
-  if (!key) return send(res, 200, { fallback: true });
+  // OpenAI si une clé est fournie, sinon Grok (texte) avec la clé xAI.
+  const llm = env('OPENAI_API_KEY')
+    ? { url: 'https://api.openai.com/v1/chat/completions', key: env('OPENAI_API_KEY'), model: env('OPENAI_MODEL') || 'gpt-4o-mini', name: 'OpenAI' }
+    : env('XAI_API_KEY') ? { url: 'https://api.x.ai/v1/chat/completions', key: env('XAI_API_KEY'), model: env('XAI_TEXT_MODEL') || 'grok-4.20-0309-non-reasoning', name: 'Grok' } : null;
+  if (!llm) return send(res, 200, { fallback: true });
   const b = body(req);
   const duration = Math.max(4, Math.min(60, Number(b.duration) || 15));
   const shots = Math.max(1, Math.ceil(duration / 15));
@@ -35,19 +38,25 @@ export default async function handler(req, res) {
     lines.push(`Corrige ce scénario selon ces remarques : ${String(b.feedback).slice(0, 1000)}\nScénario : ${JSON.stringify(b.previousPlan).slice(0, 6000)}`);
   }
   try {
-    const r = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: env('OPENAI_MODEL') || 'gpt-4o-mini',
-        response_format: { type: 'json_object' },
-        temperature: 0.9,
-        messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: lines.filter(Boolean).join('\n') }],
-      }),
-    });
-    const d = await r.json();
-    if (!r.ok) throw new Error((d.error && d.error.message) || `OpenAI ${r.status}`);
-    const plan = JSON.parse(d.choices[0].message.content);
+    const ask = async (json) => {
+      const r = await fetch(llm.url, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${llm.key}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: llm.model,
+          ...(json ? { response_format: { type: 'json_object' } } : {}),
+          temperature: 0.9,
+          messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: lines.filter(Boolean).join('\n') }],
+        }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { const e = new Error((d.error && (d.error.message || d.error)) || d.message || `${llm.name} ${r.status}`); e.status = r.status; throw e; }
+      return String(d.choices[0].message.content || '');
+    };
+    let text;
+    try { text = await ask(true); } catch (e) { if (e.status !== 400) throw e; text = await ask(false); }
+    const a = text.indexOf('{'), z = text.lastIndexOf('}');
+    const plan = JSON.parse(a >= 0 ? text.slice(a, z + 1) : text);
     if (!Array.isArray(plan.shots) || !plan.shots.length) throw new Error('scénario vide');
     plan.cast = (Array.isArray(plan.cast) ? plan.cast : []).filter((c) => c && c.name).slice(0, 4);
     plan.shots = plan.shots.map((x) => ({ ...x, seconds: Math.max(1, Math.min(15, Number(x.seconds) || 5)), visual: String(x.visual || x.videoPrompt || ''), dialogue: Array.isArray(x.dialogue) ? x.dialogue.filter((l) => l && l.line) : [] }));
