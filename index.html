@@ -1621,7 +1621,8 @@ footer a { color: var(--muted); }
     const pk = perks();
     const ms = $('#model');
     const providerReady = (m) => { const prov = (state.models[m] || DEFAULT_MODELS[m] || {}).provider || 'runway'; if (state.demo || !state.cfg) return true; return prov === 'xai' ? !!state.cfg.ready.xai : !!state.cfg.ready.runway; };
-    ms.innerHTML = MODEL_ORDER.map((m) => { const inPlan = pk.models.includes(m); const ready = providerReady(m); const ok = inPlan && ready; return `<option value="${m}" ${ok ? '' : 'disabled'}>${esc(MODEL_LABELS[m].name)} · ${state.offer.modelCredits[m]} cr/s${!inPlan ? ' · 🔒 formule supérieure' : (!ready ? ' · clé manquante' : '')}</option>`; }).join('');
+    const shown = MODEL_ORDER.filter((m) => providerReady(m));
+    ms.innerHTML = (shown.length ? shown : MODEL_ORDER).map((m) => { const inPlan = pk.models.includes(m); const ready = providerReady(m); const ok = inPlan && ready; return `<option value="${m}" ${ok ? '' : 'disabled'}>${esc(MODEL_LABELS[m].name)} · ${state.offer.modelCredits[m]} cr/s${!inPlan ? ' · 🔒 formule supérieure' : (!ready ? ' · clé manquante' : '')}</option>`; }).join('');
     const usable = MODEL_ORDER.filter((m) => pk.models.includes(m) && providerReady(m));
     if (!usable.includes(state.model)) state.model = usable[0] || pk.models[0];
     ms.value = state.model;
