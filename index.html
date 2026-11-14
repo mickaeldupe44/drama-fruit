@@ -617,7 +617,7 @@ footer a { color: var(--muted); }
       </div>
       <div class="creators">
         <div class="faces" aria-hidden="true"><span>🍓</span><span>🍌</span><span>🍇</span><span>🍋</span><span>🍑</span></div>
-        <div><b>Premiers épisodes offerts</b><br>40 crédits, sans carte bancaire</div>
+        <div><b>Premier épisode offert</b><br>25 crédits, sans carte bancaire</div>
       </div>
     </div>
     <div class="stage3" aria-label="Aperçu d'épisodes">
@@ -802,9 +802,9 @@ footer a { color: var(--muted); }
 
   <section class="section reveal" style="margin-top:72px;max-width:820px;margin-left:auto;margin-right:auto">
     <div class="center-head"><span class="kicker">Questions</span><h2>Avant de te lancer</h2></div>
-    <details><summary>Je peux essayer gratuitement ?</summary><div class="inner">Oui. À l'inscription tu reçois 40 crédits, de quoi tourner tes deux premiers épisodes de 15 secondes. Aucune carte bancaire n'est demandée.</div></details>
+    <details><summary>Je peux essayer gratuitement ?</summary><div class="inner">Oui. À l'inscription tu reçois 25 crédits, de quoi tourner ton premier épisode de 15 secondes avec Grok Imagine Lite. Aucune carte bancaire n'est demandée.</div></details>
     <details><summary>Faut-il savoir monter une vidéo ?</summary><div class="inner">Non. Le scénario, le découpage, les voix, le son et les sous-titres sont générés ensemble. Tu télécharges une vidéo prête à poster.</div></details>
-    <details><summary>Qu'est-ce qu'un crédit ?</summary><div class="inner">Un crédit paie la génération vidéo. Le coût dépend du modèle et de la durée : de 1 à 4 crédits par seconde, et la HD 1080p coûte 1,5 fois plus. Une vidéo de 8 secondes avec Grok Imagine Lite coûte 8 crédits, un épisode de 60 secondes avec Grok Imagine 1.5 en coûte 120. Si la génération échoue, les crédits te sont rendus.</div></details>
+    <details><summary>Qu'est-ce qu'un crédit ?</summary><div class="inner">Un crédit paie la génération. Chaque épisode coûte 8 crédits pour le casting et le décor (les images de tes fruits), plus la vidéo : 1 crédit par seconde avec Grok Imagine Lite, 4 avec Grok Imagine 1.5, et la HD 1080p coûte 2 fois plus. Un épisode de 15 secondes coûte donc 23 crédits en Lite et 68 en Grok Imagine 1.5. Si la génération échoue, les crédits te sont rendus.</div></details>
     <details><summary>Mes personnages gardent-ils la même tête ?</summary><div class="inner">Avec les formules Pro et Studio, tu enregistres tes personnages et ils restent identiques d'un épisode à l'autre. C'est ce qui permet de faire de vraies séries.</div></details>
     <details><summary>Combien de temps prend une vidéo ?</summary><div class="inner">Le scénario s'écrit en quelques secondes. Un épisode court se tourne en 1 à 3 minutes ; un épisode de 60 s, monté en plusieurs séquences, demande quelques minutes de plus.</div></details>
     <details><summary>Quels formats et quelles langues ?</summary><div class="inner">Vidéo verticale 9:16, jusqu'en 1080p. Les répliques peuvent être en français, anglais, espagnol, allemand, italien ou portugais.</div></details>
@@ -817,7 +817,7 @@ footer a { color: var(--muted); }
     <div class="bgwall" id="finalWall" aria-hidden="true"></div>
     <div class="fg">
       <h2>Ta prochaine vidéo virale est <span class="grad">à 3 minutes.</span></h2>
-      <p>40 crédits à l'inscription, pas de carte bancaire. Le cliffhanger, c'est toi qui l'écris.</p>
+      <p>25 crédits à l'inscription, pas de carte bancaire. Le cliffhanger, c'est toi qui l'écris.</p>
       <div class="cta-row" style="justify-content:center"><a class="btn big" href="#studio">Créer ma vidéo</a></div>
     </div>
   </div>
@@ -1217,14 +1217,16 @@ footer a { color: var(--muted); }
   const DEFAULT_OFFER = {
     planOrder: ['free', 'starter', 'pro', 'studio'],
     plans: {
-      free: { id: 'free', name: 'Découverte', price: 0, monthlyCredits: 0, welcomeCredits: 40, maxDuration: 15, hd: false, models: ['grok-imagine-video-1.5-lite', 'veo3.1_fast', 'gemini_omni_flash_1.1'], imageStart: false, maxShots: 2, revisions: 1, dailyLimit: 1, characters: 0, library: false, perks: ['40 crédits offerts (tes 2 premiers épisodes)', '1 épisode par jour, jusqu\'à 15 s', '3 modèles rapides dont Grok Imagine Lite', '1 révision par épisode', 'Lien vidéo valable 48 h'] },
-      starter: { id: 'starter', name: 'Starter', price: 9.99, monthlyCredits: 250, welcomeCredits: 0, maxDuration: 30, hd: false, models: ['grok-imagine-video-1.5', 'grok-imagine-video-1.5-lite', 'veo3.1_fast', 'gemini_omni_flash_1.1', 'kling3.0_pro'], imageStart: false, maxShots: 4, revisions: 2, dailyLimit: 0, characters: 0, library: true, perks: ['250 crédits par mois (jusqu\'à 4 min de vidéo)', 'Épisodes jusqu\'à 30 s, 4 plans montés', '5 modèles dont Grok Imagine 1.5 et Kling 3.0', '2 révisions par épisode', 'Vidéothèque permanente', 'Crédits non utilisés reportés'] },
-      pro: { id: 'pro', name: 'Pro', price: 24.99, monthlyCredits: 800, welcomeCredits: 0, maxDuration: 60, hd: true, models: ['grok-imagine-video-1.5', 'grok-imagine-video-1.5-lite', 'gemini_omni_flash_1.1', 'veo3.1_fast', 'kling3.0_pro', 'veo3.1', 'seedance2_5'], imageStart: true, maxShots: 8, revisions: 0, dailyLimit: 0, characters: 3, library: true, perks: ['800 crédits par mois (jusqu\'à 13 min de vidéo)', 'Épisodes jusqu\'à 60 s, 8 plans montés', 'Tous les modèles, HD 1080p', 'Révisions illimitées', 'Image de départ et 3 personnages enregistrés', 'Vidéothèque permanente', 'Crédits reportés'] },
-      studio: { id: 'studio', name: 'Studio', price: 69.99, monthlyCredits: 2500, welcomeCredits: 0, maxDuration: 60, hd: true, models: ['grok-imagine-video-1.5', 'grok-imagine-video-1.5-lite', 'gemini_omni_flash_1.1', 'veo3.1_fast', 'kling3.0_pro', 'veo3.1', 'seedance2_5'], imageStart: true, maxShots: 12, revisions: 0, dailyLimit: 0, characters: 20, library: true, perks: ['2500 crédits par mois (jusqu\'à 40 min de vidéo)', 'Épisodes jusqu\'à 60 s, 12 plans montés', 'Tous les modèles, HD 1080p', 'Révisions illimitées', '20 personnages enregistrés', 'Vidéothèque permanente', 'Crédits reportés', 'Support prioritaire'] },
+      free: { id: 'free', name: 'Découverte', price: 0, monthlyCredits: 0, welcomeCredits: 25, maxDuration: 15, hd: false, models: ['grok-imagine-video-1.5-lite', 'veo3.1_fast', 'gemini_omni_flash_1.1'], imageStart: false, maxShots: 2, revisions: 1, dailyLimit: 1, characters: 0, library: false, perks: ['25 crédits offerts (ton premier épisode)', '1 épisode par jour, jusqu\'à 15 s', 'Grok Imagine Lite et 2 modèles rapides', '1 révision par épisode', 'Lien vidéo valable 48 h'] },
+      starter: { id: 'starter', name: 'Starter', price: 9.99, monthlyCredits: 120, welcomeCredits: 0, maxDuration: 30, hd: false, models: ['grok-imagine-video-1.5', 'grok-imagine-video-1.5-lite', 'veo3.1_fast', 'gemini_omni_flash_1.1', 'kling3.0_pro'], imageStart: false, maxShots: 4, revisions: 2, dailyLimit: 0, characters: 0, library: true, perks: ['120 crédits par mois (≈ 5 épisodes Lite de 15 s)', 'Épisodes jusqu\'à 30 s, 4 plans montés', '5 modèles dont Grok Imagine 1.5 et Kling 3.0', '2 révisions par épisode', 'Vidéothèque permanente', 'Crédits non utilisés reportés'] },
+      pro: { id: 'pro', name: 'Pro', price: 24.99, monthlyCredits: 300, welcomeCredits: 0, maxDuration: 60, hd: true, models: ['grok-imagine-video-1.5', 'grok-imagine-video-1.5-lite', 'gemini_omni_flash_1.1', 'veo3.1_fast', 'kling3.0_pro', 'veo3.1', 'seedance2_5'], imageStart: true, maxShots: 8, revisions: 0, dailyLimit: 0, characters: 3, library: true, perks: ['300 crédits par mois (≈ 13 épisodes Lite ou 4 épisodes Grok 1.5 de 15 s)', 'Épisodes jusqu\'à 60 s, 8 plans montés', 'Tous les modèles, HD 1080p', 'Révisions illimitées', 'Image de départ et 3 personnages enregistrés', 'Vidéothèque permanente', 'Crédits reportés'] },
+      studio: { id: 'studio', name: 'Studio', price: 69.99, monthlyCredits: 900, welcomeCredits: 0, maxDuration: 60, hd: true, models: ['grok-imagine-video-1.5', 'grok-imagine-video-1.5-lite', 'gemini_omni_flash_1.1', 'veo3.1_fast', 'kling3.0_pro', 'veo3.1', 'seedance2_5'], imageStart: true, maxShots: 12, revisions: 0, dailyLimit: 0, characters: 20, library: true, perks: ['900 crédits par mois (≈ 39 épisodes Lite ou 13 épisodes Grok 1.5 de 15 s)', 'Épisodes jusqu\'à 60 s, 12 plans montés', 'Tous les modèles, HD 1080p', 'Révisions illimitées', '20 personnages enregistrés', 'Vidéothèque permanente', 'Crédits reportés', 'Support prioritaire'] },
     },
-    packs: { pack100: { id: 'pack100', name: '200 crédits', credits: 200, price: 9.99 }, pack500: { id: 'pack500', name: '1000 crédits', credits: 1000, price: 39.99 }, pack1500: { id: 'pack1500', name: '3000 crédits', credits: 3000, price: 99 } },
-    modelCredits: { 'grok-imagine-video-1.5-lite': 1, 'grok-imagine-video-1.5': 2, 'gemini_omni_flash_1.1': 1, 'veo3.1_fast': 2, 'kling3.0_pro': 3, 'veo3.1': 4, 'seedance2_5': 4 },
-    hdMultiplier: 1.5,
+    packs: { pack100: { id: 'pack100', name: '100 crédits', credits: 100, price: 9.99 }, pack500: { id: 'pack500', name: '500 crédits', credits: 500, price: 44.99 }, pack1500: { id: 'pack1500', name: '1200 crédits', credits: 1200, price: 99 } },
+    modelCredits: { 'grok-imagine-video-1.5-lite': 1, 'grok-imagine-video-1.5': 4, 'gemini_omni_flash_1.1': 2, 'veo3.1_fast': 4, 'kling3.0_pro': 5, 'veo3.1': 8, 'seedance2_5': 6 },
+    hdMultiplier: 2,
+    assetCredits: 8,
+    improveCredits: 5,
   };
   const DEFAULT_MODELS = {
     'grok-imagine-video-1.5': { provider: 'xai', durations: r(4, 15), nativeShots: false, inPromptShots: 4, image: 'first' },
@@ -1623,7 +1625,7 @@ footer a { color: var(--muted); }
 
   /* ---------- Studio ---------- */
   function perks() { return state.me ? state.me.perks : state.offer.plans.free; }
-  function cost(model, duration, hd) { const per = state.offer.modelCredits[model] || 0; return Math.ceil(per * duration * (hd ? state.offer.hdMultiplier : 1)); }
+  function cost(model, duration, hd) { const per = state.offer.modelCredits[model] || 0; return Math.ceil(per * duration * (hd ? state.offer.hdMultiplier : 1)) + (state.offer.assetCredits || 0); }
   function hdPossible(model) { return model !== 'kling3.0_pro'; }
   function decorOf(id) { return DECORS.find((d) => d.id === id) || null; }
 
