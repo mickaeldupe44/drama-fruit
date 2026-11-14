@@ -559,6 +559,10 @@ footer a { color: var(--muted); }
 .cover-prev canvas { width: 100%; height: auto; aspect-ratio: 9 / 16; border-radius: 18px; border: 1px solid var(--line); background: #000; display: block; box-shadow: 0 24px 50px rgba(0,0,0,.5); }
 .cover-ctrl input[type="range"] { width: 100%; accent-color: var(--accent); }
 .cover-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.cover-stills { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+.cover-stills button { flex: 0 0 54px; height: 96px; padding: 0; border-radius: 8px; border: 2px solid var(--line); overflow: hidden; background: #000; cursor: pointer; }
+.cover-stills button[aria-pressed="true"] { border-color: var(--accent); }
+.cover-stills img { width: 100%; height: 100%; object-fit: cover; display: block; }
 #coverIdeas button[aria-pressed="true"] { border-color: var(--accent); background: rgba(255,61,110,.15); }
 @media (max-width: 760px) { .cover-grid { grid-template-columns: 1fr; } .cover-prev { max-width: 260px; margin: 0 auto; } .modal { padding: 8px; } .modal-box { padding: 14px; max-height: calc(100vh - 16px); } }
 
@@ -1176,6 +1180,7 @@ footer a { color: var(--muted); }
         <label class="field" for="coverTime" style="margin-top:0">Image de fond <small>(glisse pour choisir le moment le plus choquant)</small></label>
         <input type="range" id="coverTime" min="0" max="10" step="0.1" value="0">
         <div class="cover-row"><button class="btn secondary small" id="coverShuffle" type="button">🎲 Moment au hasard</button><label class="btn secondary small" style="cursor:pointer">📁 Mon image<input type="file" id="coverUpload" accept="image/*" hidden></label></div>
+        <div id="coverStillsBox" hidden><label class="field">Ou choisis une scène</label><div class="cover-stills" id="coverStills"></div></div>
 
         <label class="field" for="coverTop">Accroche en haut</label>
         <input type="text" id="coverTop" maxlength="60">
@@ -2106,21 +2111,43 @@ footer a { color: var(--muted); }
     if (cover.title) list.unshift(cover.title.toUpperCase().slice(0, 50));
     return Array.from(new Set(list)).slice(0, 7);
   }
+  async function mediaUrl(u) {
+    if (!u || !/^https?:/i.test(u)) return u;
+    try { if (new URL(u).origin === location.origin) return u; } catch { return u; }
+    if (!(state.cfg && state.cfg.testMode)) return u;
+    const t = await auth.token().catch(() => null);
+    return t ? `/api/media?u=${encodeURIComponent(u)}&t=${encodeURIComponent(t)}` : u;
+  }
+  function loadStill(k) {
+    const url = cover.stills[k]; if (!url) return;
+    $$('#coverStills button').forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.still) === k)));
+    mediaUrl(url).then((u) => { const img = new Image(); if (/^https?:|^\//.test(u)) img.crossOrigin = 'anonymous'; img.onload = () => { cover.img = img; drawCover(); info($('#coverInfo'), ''); }; img.src = u; });
+  }
+  function loadSeg(k, randomTime) {
+    const v = $('#coverVideo'); cover.seg = k; cover.randomTime = Boolean(randomTime); cover.ready = false;
+    mediaUrl(cover.segs[k]).then((u) => { v.src = u || ''; if (u) v.load(); });
+  }
   function openCover(opts) {
     cover.src = opts.src || ''; cover.poster = opts.poster || ''; cover.title = opts.title || '';
     cover.names = opts.names || {}; cover.img = null; cover.ready = false; cover.tainted = false;
+    cover.segs = (Array.isArray(opts.segments) && opts.segments.length ? opts.segments : [cover.src]).filter(Boolean);
+    cover.stills = (opts.stills || []).filter(Boolean);
     const hooks = coverHooks();
-    cover.top = hooks[1] || hooks[0]; cover.bottom = opts.bottom || 'PARTIE 1';
+    cover.top = (opts.titleIsHook ? hooks[0] : hooks[1]) || hooks[0]; cover.bottom = opts.bottom || 'PARTIE 1';
     $('#coverTop').value = cover.top; $('#coverBottom').value = cover.bottom;
     $('#coverIdeas').innerHTML = hooks.map((h) => `<button type="button" data-cover-hook="${esc(h)}">${esc(h)}</button>`).join('');
+    $('#coverStills').innerHTML = cover.stills.map((u, k) => `<button type="button" data-still="${k}" aria-label="Scène ${k + 1}"><img src="${esc(u)}" alt="" loading="lazy"></button>`).join('');
+    $('#coverStillsBox').hidden = !cover.stills.length;
     renderCoverStyles(); info($('#coverInfo'), '');
     $('#coverModal').hidden = false; document.body.style.overflow = 'hidden';
     const v = $('#coverVideo');
     if (cover.poster) { const pi = new Image(); pi.onload = () => { if (!cover.ready && !cover.img) { cover.posterImg = pi; drawCover(); } }; pi.src = cover.poster; }
-    v.onloadedmetadata = () => { const d = v.duration || 10; $('#coverTime').max = String(Math.max(0.1, d - 0.1)); const t = Math.min(d - 0.1, d * 0.38); $('#coverTime').value = String(t); v.currentTime = t; };
-    v.onseeked = () => { cover.ready = true; drawCover(); };
-    v.onerror = () => { info($('#coverInfo'), 'Impossible de lire cette vidéo ici. Utilise « Mon image » avec une capture d\'écran de l\'épisode.'); };
-    v.src = cover.src || ''; if (cover.src) v.load();
+    v.onloadedmetadata = () => { const d = v.duration || 10; $('#coverTime').max = String(Math.max(0.1, d - 0.1)); const t = cover.randomTime ? Math.random() * (d - 0.2) : Math.min(d - 0.1, d * 0.38); $('#coverTime').value = String(t); v.currentTime = t; };
+    v.onseeked = () => { cover.ready = true; if (!cover.keepStill) cover.img = null; cover.keepStill = false; drawCover(); info($('#coverInfo'), ''); };
+    v.onerror = () => { if (!cover.segs.length) return; info($('#coverInfo'), cover.stills.length ? 'La vidéo ne se lit pas ici : choisis plutôt une des images de scène ci-dessus.' : 'Impossible de lire cette vidéo ici. Utilise « Mon image » avec une capture d\'écran de l\'épisode.'); };
+    cover.keepStill = Boolean(cover.stills.length);
+    if (cover.stills.length) loadStill(Math.min(cover.stills.length - 1, Math.floor(cover.stills.length * 0.38)));
+    if (cover.segs.length) loadSeg(cover.stills.length ? Math.min(cover.segs.length - 1, Math.floor(cover.segs.length * 0.38)) : 0, false); else v.removeAttribute('src');
     drawCover();
     setTimeout(() => $('#coverTop').focus(), 50);
   }
@@ -2386,7 +2413,7 @@ footer a { color: var(--muted); }
       if (e.target.closest('#btnIdea')) { state.idea = randomIdea(); const ta = $('#idea'); ta.value = state.idea; ta.classList.remove('flash'); void ta.offsetWidth; ta.classList.add('flash'); return; }
       const chip = e.target.closest('button[data-idea]'); if (chip) { state.idea = chip.dataset.idea; $('#idea').value = state.idea; if ($('#view-studio').hidden) go('studio'); else $('#idea').focus(); return; }
       const ep = e.target.closest('.ep[data-ep]'); if (ep && !ep.classList.contains('open')) { ep.classList.add('open'); ep.innerHTML = ttIframe(ep.dataset.ep); return; }
-      const cv = e.target.closest('button[data-cover]'); if (cv) { const it = state.library.find((x) => x.id === cv.dataset.cover); if (it) openCover({ src: it.outputUrl, poster: it.poster, title: it.title, names: namesFromPlan(it.plan) }); return; }
+      const cv = e.target.closest('button[data-cover]'); if (cv) { const it = state.library.find((x) => x.id === cv.dataset.cover); if (it) openCover({ src: it.outputUrl, segments: it.segments, poster: it.poster, title: it.title, names: namesFromPlan(it.plan) }); return; }
       const ch = e.target.closest('button[data-cover-hook]'); if (ch) { cover.top = ch.dataset.coverHook; $('#coverTop').value = cover.top; renderCoverStyles(); drawCover(); return; }
       const cs = e.target.closest('button[data-cover-style]'); if (cs) { cover.style = cs.dataset.coverStyle; renderCoverStyles(); drawCover(); return; }
       if (e.target.id === 'coverModal') { closeCover(); return; }
@@ -2419,12 +2446,13 @@ footer a { color: var(--muted); }
     $('#btnImprove').addEventListener('click', () => improve(false));
     $('#viral').addEventListener('change', (e) => { state.viral = e.target.checked; renderCost(); });
     $('#btnNew').addEventListener('click', () => { state.plan = null; state.lastJob = null; $('#studioRun').hidden = true; $('#idea').value = ''; state.idea = ''; $('#idea').focus(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
-    $('#btnCover').addEventListener('click', () => { const j = state.lastJob || {}; const pl = j.plan || state.plan || {}; openCover({ src: j.outputUrl, title: pl.couverture || j.title || pl.title, names: namesFromPlan(pl), bottom: pl.outro && pl.outro.type === 'like' ? 'PARTIE 1' : 'PARTIE 1' }); });
+    $('#btnCover').addEventListener('click', () => { const j = state.lastJob || {}; const pl = j.plan || state.plan || {}; openCover({ src: j.outputUrl, segments: j.segments, stills: (state.packAssets && state.packAssets.scenes) || [], titleIsHook: Boolean(pl.couverture), title: pl.couverture || j.title || pl.title, names: namesFromPlan(pl), bottom: pl.outro && pl.outro.type === 'like' ? 'PARTIE 1' : 'PARTIE 1' }); });
     $('#epCover').addEventListener('click', () => { const t = ($('#epTitle').textContent || '').replace(/[«»]/g, '').trim(); const n = (($('#epVideo').getAttribute('src') || '').match(/episode-(\d+)/) || [])[1] || '1'; openCover({ src: `media/episode-${n}.mp4`, poster: `media/episode-${n}.jpg`, title: t }); });
     $('#coverClose').addEventListener('click', closeCover);
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#coverModal').hidden) closeCover(); });
-    $('#coverTime').addEventListener('input', (e) => { cover.img = null; const v = $('#coverVideo'); if (v.readyState >= 1) v.currentTime = Number(e.target.value); });
-    $('#coverShuffle').addEventListener('click', () => { const v = $('#coverVideo'); if (v.readyState >= 1 && v.duration) { cover.img = null; const t = Math.random() * (v.duration - 0.2); $('#coverTime').value = String(t); v.currentTime = t; } });
+    $('#coverTime').addEventListener('input', (e) => { cover.img = null; cover.keepStill = false; $$('#coverStills button').forEach((b) => b.setAttribute('aria-pressed', 'false')); const v = $('#coverVideo'); if (v.readyState >= 1) v.currentTime = Number(e.target.value); });
+    $('#coverShuffle').addEventListener('click', () => { cover.keepStill = false; $$('#coverStills button').forEach((b) => b.setAttribute('aria-pressed', 'false')); if (cover.segs && cover.segs.length > 1) { loadSeg(Math.floor(Math.random() * cover.segs.length), true); return; } const v = $('#coverVideo'); if (v.readyState >= 1 && v.duration) { cover.img = null; const t = Math.random() * (v.duration - 0.2); $('#coverTime').value = String(t); v.currentTime = t; } else if (cover.stills && cover.stills.length) loadStill(Math.floor(Math.random() * cover.stills.length)); });
+    $('#coverStills').addEventListener('click', (e) => { const b = e.target.closest('button[data-still]'); if (b) { cover.keepStill = true; loadStill(Number(b.dataset.still)); } });
     $('#coverUpload').addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; if (!f) return; const img = new Image(); img.onload = () => { cover.img = img; drawCover(); }; img.src = URL.createObjectURL(f); info($('#coverInfo'), ''); });
     $('#coverTop').addEventListener('input', (e) => { cover.top = e.target.value; renderCoverStyles(); drawCover(); });
     $('#coverBottom').addEventListener('input', (e) => { cover.bottom = e.target.value; drawCover(); });
