@@ -23,7 +23,8 @@ function promptFor(plan, seg, lang, refMap) {
   if (!refMap.some((r) => r.isSet) && plan.setting) parts.push(`Setting: ${plan.settingPrompt || plan.setting}.`);
   if (seg.total > 1) parts.push(`This is part ${seg.index + 1} of ${seg.total} of the same continuous episode.`);
   seg.shots.forEach((s, i) => {
-    parts.push(`Shot ${i + 1}: ${s.videoPrompt || s.visual || ''}`);
+    const st = s.set && refMap.find((r) => r.isSet && r.setId === s.set);
+    parts.push(`Shot ${i + 1}${st ? ` (in ${st.tag})` : ''}: ${s.videoPrompt || s.visual || ''}`);
     (s.dialogue || []).forEach((l) => parts.push(`${l.who} (${l.tone || 'dramatic'}) says in ${lang === 'en' ? 'English' : 'French'}: "${l.line}"`));
   });
   return parts.filter(Boolean).join('\n').slice(0, 4000);
@@ -42,9 +43,13 @@ export default async function handler(req, res) {
   const full = model === 'grok-imagine-video-1.5'; // seul ce modèle accepte les images de référence
   const userImage = typeof b.imageDataUrl === 'string' && b.imageDataUrl.startsWith('data:image/') ? b.imageDataUrl : null;
   const firstFrame = userImage || (isImg(assets.keyframe) ? assets.keyframe : null);
-  const refs = [];
-  if (isImg(assets.decor)) refs.push({ url: assets.decor, label: 'the set', isSet: true });
-  (assets.characters || []).forEach((c) => { if (isImg(c.url)) refs.push({ url: c.url, label: c.name }); });
+  const sets = (Array.isArray(assets.sets) && assets.sets.length ? assets.sets : (isImg(assets.decor) ? [{ id: 's1', name: 'main', url: assets.decor }] : [])).filter((x) => isImg(x.url));
+  const charRefs = (assets.characters || []).filter((c) => isImg(c.url)).map((c) => ({ url: c.url, label: c.name }));
+  const refsFor = (seg) => {
+    const ids = new Set(seg.shots.map((x) => x.set).filter(Boolean));
+    const used = sets.filter((x) => ids.has(x.id));
+    return [...(used.length ? used : sets).map((x) => ({ url: x.url, label: `the "${x.name}" set`, isSet: true, setId: x.id })), ...charRefs];
+  };
   const segs = segmentsOf(plan, duration);
   try {
     const ids = [];
@@ -53,6 +58,7 @@ export default async function handler(req, res) {
       const pinned = seg.index === 0 ? firstFrame : (!full ? firstFrame : null);
       if (pinned) payload.image = { url: pinned };
       let refMap = [];
+      const refs = refsFor(seg);
       if (full && refs.length) {
         const offset = pinned ? 1 : 0;
         const used = refs.slice(0, 14 - offset);

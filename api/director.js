@@ -5,11 +5,12 @@ const SYSTEM = `Tu es le réalisateur et le prompt engineer de "Drama Fruit" : d
 Ton scénario sert ensuite à générer des images (personnages, décor) puis une vidéo avec Grok Imagine. Écris donc des prompts visuels précis, en anglais.
 Réponds UNIQUEMENT avec un objet JSON :
 {"title": string, "logline": string,
- "cast": [{"name": string, "fruit": string (en anglais), "look": string (accessoire distinctif, en anglais), "imagePrompt": string (description visuelle complète du personnage en anglais : couleurs, texture du fruit, expression, vêtements/accessoires, 40 mots max)}],
- "setting": string (décor court, en anglais), "settingPrompt": string (description visuelle complète du décor vide en anglais : lieu, lumière, couleurs, ambiance, 50 mots max),
- "shots": [{"seconds": number, "visual": string (ce qu'on voit, en anglais), "videoPrompt": string (prompt vidéo en anglais pour Grok : action, mouvements de caméra, cadrage, émotions, nomme les personnages par leur nom, 60 mots max), "dialogue": [{"who": string, "tone": string (en anglais), "line": string (dans la langue demandée)}]}],
+ "cast": [{"name": string, "fruit": string (en anglais), "look": string (accessoire distinctif, en anglais), "imagePrompt": string (description visuelle complète d'un personnage beau et attachant en anglais : couleurs, texture brillante du fruit, visage expressif, tenue élégante et accessoires qui racontent son rôle, 45 mots max)}],
+ "setting": string (décor principal court, en anglais), "settingPrompt": string (description visuelle du décor principal, en anglais),
+ "sets": [{"id": "s1", "name": string (nom court en français, ex. "Salle de mariage"), "prompt": string (description visuelle complète du décor vide en anglais : lieu, lumière, couleurs, ambiance, accessoires, 50 mots max)}] (2 ou 3 décors différents et spectaculaires, 1 seul si l'épisode dure moins de 8 s),
+ "shots": [{"seconds": number, "set": string (id du décor de ce plan), "visual": string (ce qu'on voit, en anglais), "videoPrompt": string (prompt vidéo en anglais pour Grok : action, mouvements de caméra, cadrage, émotions, nomme les personnages par leur nom, 60 mots max), "dialogue": [{"who": string, "tone": string (en anglais), "line": string (dans la langue demandée)}]}],
  "caption": string, "hashtags": [string]}
-Règles : 2 à 4 personnages, répliques courtes et percutantes, accroche dans la première seconde, une révélation, et une fin qui donne envie de voir la suite.
+Règles : 2 à 4 personnages, l'épisode change de décor au moins une fois s'il dure 10 s ou plus, répliques courtes et percutantes, accroche dans la première seconde, une révélation, et une fin qui donne envie de voir la suite.
 La somme des "seconds" doit être exactement égale à la durée demandée. Chaque plan dure au maximum 15 secondes.`;
 
 export default async function handler(req, res) {
@@ -61,6 +62,7 @@ export default async function handler(req, res) {
     plan.cast = (Array.isArray(plan.cast) ? plan.cast : []).filter((c) => c && c.name).slice(0, 4);
     plan.shots = plan.shots.map((x) => ({ ...x, seconds: Math.max(1, Math.min(15, Number(x.seconds) || 5)), visual: String(x.visual || x.videoPrompt || ''), dialogue: Array.isArray(x.dialogue) ? x.dialogue.filter((l) => l && l.line) : [] }));
     plan.hashtags = Array.isArray(plan.hashtags) ? plan.hashtags : [];
+    plan.sets = (Array.isArray(plan.sets) ? plan.sets : []).filter((x) => x && x.id && x.prompt).slice(0, 3);
     if (b.viral) plan.viral = true;
     send(res, 200, { plan, balance: 9999 });
   } catch (e) {

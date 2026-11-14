@@ -617,7 +617,7 @@ footer a { color: var(--muted); }
       </div>
       <div class="creators">
         <div class="faces" aria-hidden="true"><span>🍓</span><span>🍌</span><span>🍇</span><span>🍋</span><span>🍑</span></div>
-        <div><b>Premier épisode offert</b><br>25 crédits, sans carte bancaire</div>
+        <div><b>Premier épisode offert</b><br>30 crédits, sans carte bancaire</div>
       </div>
     </div>
     <div class="stage3" aria-label="Aperçu d'épisodes">
@@ -802,9 +802,9 @@ footer a { color: var(--muted); }
 
   <section class="section reveal" style="margin-top:72px;max-width:820px;margin-left:auto;margin-right:auto">
     <div class="center-head"><span class="kicker">Questions</span><h2>Avant de te lancer</h2></div>
-    <details><summary>Je peux essayer gratuitement ?</summary><div class="inner">Oui. À l'inscription tu reçois 25 crédits, de quoi tourner ton premier épisode de 15 secondes avec Grok Imagine Lite. Aucune carte bancaire n'est demandée.</div></details>
+    <details><summary>Je peux essayer gratuitement ?</summary><div class="inner">Oui. À l'inscription tu reçois 30 crédits, de quoi tourner ton premier épisode de 15 secondes avec Grok Imagine Lite. Aucune carte bancaire n'est demandée.</div></details>
     <details><summary>Faut-il savoir monter une vidéo ?</summary><div class="inner">Non. Le scénario, le découpage, les voix, le son et les sous-titres sont générés ensemble. Tu télécharges une vidéo prête à poster.</div></details>
-    <details><summary>Qu'est-ce qu'un crédit ?</summary><div class="inner">Un crédit paie la génération. Chaque épisode coûte 8 crédits pour le casting et le décor (les images de tes fruits), plus la vidéo : 1 crédit par seconde avec Grok Imagine Lite, 4 avec Grok Imagine 1.5, et la HD 1080p coûte 2 fois plus. Un épisode de 15 secondes coûte donc 23 crédits en Lite et 68 en Grok Imagine 1.5. Si la génération échoue, les crédits te sont rendus.</div></details>
+    <details><summary>Qu'est-ce qu'un crédit ?</summary><div class="inner">Un crédit paie la génération. Chaque épisode coûte 12 crédits pour le casting et les décors (les images de tes fruits), plus la vidéo : 1 crédit par seconde avec Grok Imagine Lite, 4 avec Grok Imagine 1.5, et la HD 1080p coûte 2 fois plus. Un épisode de 15 secondes coûte donc 27 crédits en Lite et 72 en Grok Imagine 1.5. Si la génération échoue, les crédits te sont rendus.</div></details>
     <details><summary>Mes personnages gardent-ils la même tête ?</summary><div class="inner">Avec les formules Pro et Studio, tu enregistres tes personnages et ils restent identiques d'un épisode à l'autre. C'est ce qui permet de faire de vraies séries.</div></details>
     <details><summary>Combien de temps prend une vidéo ?</summary><div class="inner">Le scénario s'écrit en quelques secondes. Un épisode court se tourne en 1 à 3 minutes ; un épisode de 60 s, monté en plusieurs séquences, demande quelques minutes de plus.</div></details>
     <details><summary>Quels formats et quelles langues ?</summary><div class="inner">Vidéo verticale 9:16, jusqu'en 1080p. Les répliques peuvent être en français, anglais, espagnol, allemand, italien ou portugais.</div></details>
@@ -817,7 +817,7 @@ footer a { color: var(--muted); }
     <div class="bgwall" id="finalWall" aria-hidden="true"></div>
     <div class="fg">
       <h2>Ta prochaine vidéo virale est <span class="grad">à 3 minutes.</span></h2>
-      <p>25 crédits à l'inscription, pas de carte bancaire. Le cliffhanger, c'est toi qui l'écris.</p>
+      <p>30 crédits à l'inscription, pas de carte bancaire. Le cliffhanger, c'est toi qui l'écris.</p>
       <div class="cta-row" style="justify-content:center"><a class="btn big" href="#studio">Créer ma vidéo</a></div>
     </div>
   </div>
@@ -1217,15 +1217,15 @@ footer a { color: var(--muted); }
   const DEFAULT_OFFER = {
     planOrder: ['free', 'starter', 'pro', 'studio'],
     plans: {
-      free: { id: 'free', name: 'Découverte', price: 0, monthlyCredits: 0, welcomeCredits: 25, maxDuration: 15, hd: false, models: ['grok-imagine-video-1.5-lite', 'veo3.1_fast', 'gemini_omni_flash_1.1'], imageStart: false, maxShots: 2, revisions: 1, dailyLimit: 1, characters: 0, library: false, perks: ['25 crédits offerts (ton premier épisode)', '1 épisode par jour, jusqu\'à 15 s', 'Grok Imagine Lite et 2 modèles rapides', '1 révision par épisode', 'Lien vidéo valable 48 h'] },
-      starter: { id: 'starter', name: 'Starter', price: 9.99, monthlyCredits: 120, welcomeCredits: 0, maxDuration: 30, hd: false, models: ['grok-imagine-video-1.5', 'grok-imagine-video-1.5-lite', 'veo3.1_fast', 'gemini_omni_flash_1.1', 'kling3.0_pro'], imageStart: false, maxShots: 4, revisions: 2, dailyLimit: 0, characters: 0, library: true, perks: ['120 crédits par mois (≈ 5 épisodes Lite de 15 s)', 'Épisodes jusqu\'à 30 s, 4 plans montés', '5 modèles dont Grok Imagine 1.5 et Kling 3.0', '2 révisions par épisode', 'Vidéothèque permanente', 'Crédits non utilisés reportés'] },
-      pro: { id: 'pro', name: 'Pro', price: 24.99, monthlyCredits: 300, welcomeCredits: 0, maxDuration: 60, hd: true, models: ['grok-imagine-video-1.5', 'grok-imagine-video-1.5-lite', 'gemini_omni_flash_1.1', 'veo3.1_fast', 'kling3.0_pro', 'veo3.1', 'seedance2_5'], imageStart: true, maxShots: 8, revisions: 0, dailyLimit: 0, characters: 3, library: true, perks: ['300 crédits par mois (≈ 13 épisodes Lite ou 4 épisodes Grok 1.5 de 15 s)', 'Épisodes jusqu\'à 60 s, 8 plans montés', 'Tous les modèles, HD 1080p', 'Révisions illimitées', 'Image de départ et 3 personnages enregistrés', 'Vidéothèque permanente', 'Crédits reportés'] },
-      studio: { id: 'studio', name: 'Studio', price: 69.99, monthlyCredits: 900, welcomeCredits: 0, maxDuration: 60, hd: true, models: ['grok-imagine-video-1.5', 'grok-imagine-video-1.5-lite', 'gemini_omni_flash_1.1', 'veo3.1_fast', 'kling3.0_pro', 'veo3.1', 'seedance2_5'], imageStart: true, maxShots: 12, revisions: 0, dailyLimit: 0, characters: 20, library: true, perks: ['900 crédits par mois (≈ 39 épisodes Lite ou 13 épisodes Grok 1.5 de 15 s)', 'Épisodes jusqu\'à 60 s, 12 plans montés', 'Tous les modèles, HD 1080p', 'Révisions illimitées', '20 personnages enregistrés', 'Vidéothèque permanente', 'Crédits reportés', 'Support prioritaire'] },
+      free: { id: 'free', name: 'Découverte', price: 0, monthlyCredits: 0, welcomeCredits: 30, maxDuration: 15, hd: false, models: ['grok-imagine-video-1.5-lite', 'veo3.1_fast', 'gemini_omni_flash_1.1'], imageStart: false, maxShots: 2, revisions: 1, dailyLimit: 1, characters: 0, library: false, perks: ['30 crédits offerts (ton premier épisode)', '1 épisode par jour, jusqu\'à 15 s', 'Grok Imagine Lite et 2 modèles rapides', '1 révision par épisode', 'Lien vidéo valable 48 h'] },
+      starter: { id: 'starter', name: 'Starter', price: 9.99, monthlyCredits: 120, welcomeCredits: 0, maxDuration: 30, hd: false, models: ['grok-imagine-video-1.5', 'grok-imagine-video-1.5-lite', 'veo3.1_fast', 'gemini_omni_flash_1.1', 'kling3.0_pro'], imageStart: false, maxShots: 4, revisions: 2, dailyLimit: 0, characters: 0, library: true, perks: ['120 crédits par mois (≈ 4 épisodes Lite de 15 s)', 'Épisodes jusqu\'à 30 s, 4 plans montés', '5 modèles dont Grok Imagine 1.5 et Kling 3.0', '2 révisions par épisode', 'Vidéothèque permanente', 'Crédits non utilisés reportés'] },
+      pro: { id: 'pro', name: 'Pro', price: 24.99, monthlyCredits: 300, welcomeCredits: 0, maxDuration: 60, hd: true, models: ['grok-imagine-video-1.5', 'grok-imagine-video-1.5-lite', 'gemini_omni_flash_1.1', 'veo3.1_fast', 'kling3.0_pro', 'veo3.1', 'seedance2_5'], imageStart: true, maxShots: 8, revisions: 0, dailyLimit: 0, characters: 3, library: true, perks: ['300 crédits par mois (≈ 11 épisodes Lite ou 4 épisodes Grok 1.5 de 15 s)', 'Épisodes jusqu\'à 60 s, 8 plans montés', 'Tous les modèles, HD 1080p', 'Révisions illimitées', 'Image de départ et 3 personnages enregistrés', 'Vidéothèque permanente', 'Crédits reportés'] },
+      studio: { id: 'studio', name: 'Studio', price: 69.99, monthlyCredits: 900, welcomeCredits: 0, maxDuration: 60, hd: true, models: ['grok-imagine-video-1.5', 'grok-imagine-video-1.5-lite', 'gemini_omni_flash_1.1', 'veo3.1_fast', 'kling3.0_pro', 'veo3.1', 'seedance2_5'], imageStart: true, maxShots: 12, revisions: 0, dailyLimit: 0, characters: 20, library: true, perks: ['900 crédits par mois (≈ 33 épisodes Lite ou 12 épisodes Grok 1.5 de 15 s)', 'Épisodes jusqu\'à 60 s, 12 plans montés', 'Tous les modèles, HD 1080p', 'Révisions illimitées', '20 personnages enregistrés', 'Vidéothèque permanente', 'Crédits reportés', 'Support prioritaire'] },
     },
     packs: { pack100: { id: 'pack100', name: '100 crédits', credits: 100, price: 9.99 }, pack500: { id: 'pack500', name: '500 crédits', credits: 500, price: 44.99 }, pack1500: { id: 'pack1500', name: '1200 crédits', credits: 1200, price: 99 } },
     modelCredits: { 'grok-imagine-video-1.5-lite': 1, 'grok-imagine-video-1.5': 4, 'gemini_omni_flash_1.1': 2, 'veo3.1_fast': 4, 'kling3.0_pro': 5, 'veo3.1': 8, 'seedance2_5': 6 },
     hdMultiplier: 2,
-    assetCredits: 8,
+    assetCredits: 12,
     improveCredits: 5,
   };
   const DEFAULT_MODELS = {
@@ -1701,10 +1701,34 @@ footer a { color: var(--muted); }
   function info(el, msg) { el.textContent = msg; el.hidden = !msg; }
 
   function seatAvatar(c) { return `<span style="font-size:19px">${FRUIT_EMOJI[(c.fruit || '').toLowerCase()] || '🍈'}</span>`; }
+  function planSets(p) { return (Array.isArray(p.sets) && p.sets.length ? p.sets : [{ id: 's1', name: 'Décor', prompt: p.settingPrompt || p.setting || '' }]).slice(0, 3); }
+  async function makeAssets() {
+    const p = state.plan; const cast = p.cast.slice(0, 4); const sets = planSets(p);
+    const who = state.cfg.ready.imageProvider === 'openai' ? 'OpenAI' : 'Grok';
+    setStage(2); showProgress(0, `${who} dessine les personnages et les décors…`, true);
+    $('#runStatus').textContent = `Création du casting et de ${sets.length} décor${sets.length > 1 ? 's' : ''} (1 à 2 minutes)…`;
+    $('#assetBox').hidden = false; $('#assetNote').textContent = 'en cours…';
+    const head = $('#assetBox .asset-head b'); if (head) head.textContent = `🎨 Casting et décors créés par ${who}`;
+    $('#assetGrid').innerHTML = cast.map((c) => `<figure><div class="ph">${esc(c.name)}<br>⏳</div></figure>`).join('') + sets.map((x) => `<figure class="wide"><div class="ph">${esc(x.name)}<br>⏳</div></figure>`).join('');
+    const slim = { title: p.title, logline: p.logline, cast: p.cast, setting: p.setting, settingPrompt: p.settingPrompt, sets: p.sets, shots: (p.shots || []).slice(0, 1) };
+    let done = 0; const total = cast.length + sets.length + 1;
+    const call = (b) => api('/api/image', { method: 'POST', body: Object.assign({ plan: slim }, b) }).then((d) => { done += 1; showProgress(done / total, `${who} dessine les personnages et les décors… ${done}/${total}`); return d.url; }).catch((e) => { if (e.code === 'unauthorized') throw e; done += 1; return null; });
+    const [charUrls, setUrls] = await Promise.all([Promise.all(cast.map((c, i) => call({ kind: 'char', index: i }))), Promise.all(sets.map((x, i) => call({ kind: 'set', index: i })))]);
+    const a = { characters: cast.map((c, i) => ({ name: c.name, fruit: c.fruit, url: charUrls[i] })).filter((c) => c.url), sets: sets.map((x, i) => ({ id: x.id, name: x.name, url: setUrls[i] })).filter((x) => x.url) };
+    if (!a.characters.length && !a.sets.length) throw new Error('Aucune image créée.');
+    a.decor = a.sets[0] ? a.sets[0].url : null;
+    state.assets = a; renderAssets();
+    const firstSet = (p.shots && p.shots[0] && a.sets.find((x) => x.id === p.shots[0].set)) || a.sets[0];
+    const refs = (firstSet ? [{ url: firstSet.url, label: `the "${firstSet.name}" set` }] : []).concat(a.characters.map((c) => ({ url: c.url, label: `${c.name}, a ${c.fruit}` }))).slice(0, 5);
+    $('#runStatus').textContent = 'Mise en place de la première image…';
+    const key = await call({ kind: 'key', refs });
+    if (key) { a.keyframe = key; renderAssets(); }
+  }
   function renderAssets() {
     const a = state.assets; if (!a) { $('#assetBox').hidden = true; return; }
     const fig = (url, label, wide) => `<figure class="${wide ? 'wide' : ''}">${url ? `<img src="${esc(url)}" alt="${esc(label)}" loading="lazy">` : '<div class="ph">—</div>'}<figcaption>${esc(label)}</figcaption></figure>`;
-    $('#assetGrid').innerHTML = (a.characters || []).map((c) => fig(c.url, c.name)).join('') + fig(a.decor, 'Décor', true) + (a.keyframe ? fig(a.keyframe, '1re image', true) : '');
+    const sets = a.sets && a.sets.length ? a.sets : (a.decor ? [{ name: 'Décor', url: a.decor }] : []);
+    $('#assetGrid').innerHTML = (a.characters || []).map((c) => fig(c.url, c.name)).join('') + sets.map((x) => fig(x.url, x.name, true)).join('') + (a.keyframe ? fig(a.keyframe, '1re image', true) : '');
     $('#assetNote').textContent = a.keyframe ? 'Grok tourne la vidéo à partir de ces images.' : 'Grok s\'en sert comme références.';
     $('#assetBox').hidden = false;
   }
@@ -1808,12 +1832,8 @@ footer a { color: var(--muted); }
     }
     if (!state.cfg.ready.runway && !state.cfg.ready.xai) { hideProgress(); err($('#runError'), 'Clé vidéo manquante sur le serveur.'); return; }
     if (state.cfg.ready.images && !state.assets && !state.image && !state.characterId) {
-      setStage(2); showProgress(0, 'Grok dessine les personnages et le décor…', true);
-      $('#runStatus').textContent = 'Création des images du casting et du décor (30 à 60 s)…';
-      $('#assetBox').hidden = false; $('#assetNote').textContent = 'en cours…';
-      $('#assetGrid').innerHTML = state.plan.cast.slice(0, 4).map((c) => `<figure><div class="ph">${esc(c.name)}<br>⏳</div></figure>`).join('') + '<figure class="wide"><div class="ph">Décor<br>⏳</div></figure>';
-      try { state.assets = await api('/api/assets', { method: 'POST', body: { plan: state.plan } }); renderAssets(); }
-      catch (e) { if (e.code === 'unauthorized') throw e; $('#assetBox').hidden = true; toast('Images non créées, tournage sans elles.'); }
+      try { await makeAssets(); }
+      catch (e) { if (e.code === 'unauthorized') throw e; $('#assetBox').hidden = true; state.assets = null; toast('Images non créées, tournage sans elles.'); }
     }
     setStage(2); showProgress(0, 'Envoi au plateau…', true);
     $('#resultBox').hidden = false; $('#screenIdle').hidden = false; $('#screenText').textContent = 'Plateau en place, tournage en cours…';
