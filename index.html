@@ -2008,8 +2008,8 @@ footer a { color: var(--muted); }
   }
 
   function finish(j) {
-    hideProgress(); setStage(3, 'done'); state.job = null; state.lastJob = j;
-    $('#runStatus').textContent = 'Épisode prêt.';
+    hideProgress(); setStage(3, 'done'); state.job = null; state.lastJob = j; if (!j.plan && state.plan) j.plan = state.plan; saveLocalEpisode(j);
+    $('#runStatus').textContent = Array.isArray(j.segments) && j.segments.length > 1 && !j.montageUrl ? 'Épisode prêt. Appuie sur « 🎬 Montage » juste sous la vidéo pour coller les scènes, ajouter les sous-titres et la musique.' : 'Épisode prêt.';
     $('#resultBox').hidden = false;
     const screen = $('#screen'); const old = $('#screen video'); if (old) old.remove();
     $('#screenIdle').hidden = Boolean(j.outputUrl);
@@ -2067,11 +2067,29 @@ footer a { color: var(--muted); }
     const on = Boolean(state.lastJob.featured);
     $('#resultBox .actions').insertAdjacentHTML('beforeend', `<button class="btn ${on ? 'secondary' : ''} small" id="btnFeature" type="button" data-feature="${esc(state.lastJob.id)}" data-on="${on}">${on ? '★ Retirer de l\'accueil' : '☆ Mettre en avant sur l\'accueil'}</button>`);
   }
+  // Mode test : pas de base de données, on garde les épisodes terminés dans ce navigateur.
+  function localEpisodes() { try { return JSON.parse(localStorage.getItem('df_episodes') || '[]'); } catch { return []; } }
+  function saveLocalEpisode(j) {
+    if (!j || !j.id || j.status !== 'done' || !(state.cfg && state.cfg.testMode)) return;
+    const it = { id: j.id, status: 'done', title: j.title, model: j.model, duration: j.duration, cost: j.cost || 0, createdAt: j.createdAt || new Date().toISOString(), outputUrl: j.outputUrl, segments: j.segments, plan: j.plan || state.plan || null, local: true };
+    let list = localEpisodes().filter((x) => x.id !== it.id); list.unshift(it); list = list.slice(0, 20);
+    for (;;) { try { localStorage.setItem('df_episodes', JSON.stringify(list)); break; } catch { if (list.length <= 1) break; list = list.slice(0, -1); } }
+  }
+  function withLocal(items) {
+    if (!(state.cfg && state.cfg.testMode)) return items;
+    const ids = new Set(items.map((x) => x.id));
+    return items.concat(localEpisodes().filter((x) => !ids.has(x.id))).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  }
+  function openEpisodeInStudio(it) {
+    state.lastJob = it; if (it.plan) state.plan = it.plan;
+    go('studio');
+    setTimeout(() => { $('#studioRun').hidden = false; finish(it); $('#montageOpts').hidden = false; $('#resultBox').scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 250);
+  }
   async function loadRecent() {
     if (state.demo || !state.me) { $('#recentBox').hidden = true; return; }
     try {
       const d = await api('/api/library');
-      state.library = d.items || [];
+      state.library = withLocal(d.items || []);
       const items = state.library.slice(0, 5);
       $('#recentBox').hidden = !items.length;
       $('#recentList').innerHTML = items.map(libItem).join('');
@@ -2436,7 +2454,7 @@ footer a { color: var(--muted); }
     const admin = state.me && state.me.admin && it.status === 'done' && it.stored;
     const adminRow = admin ? `<div class="feature-row"><button class="btn ${it.featured ? 'secondary' : ''} small" type="button" data-feature="${esc(it.id)}" data-on="${Boolean(it.featured)}">${it.featured ? '★ Retirer' : '☆ Accueil'}</button><input type="text" data-views="${esc(it.id)}" value="${esc(it.viewsLabel || '')}" placeholder="Vues (1,8 M)" aria-label="Compteur de vues affiché"></div>` : '';
     const model = MODEL_LABELS[it.model] ? MODEL_LABELS[it.model].name : (it.model || '');
-    const acts = it.outputUrl ? `<div class="vact"><a class="btn small" href="${esc(it.outputUrl)}" target="_blank" rel="noopener">Voir</a><a class="btn secondary small" href="${esc(it.outputUrl)}" download>Télécharger</a><button class="btn secondary small" type="button" data-cover="${esc(it.id)}" style="flex-basis:100%">🖼️ Couverture</button></div>` : '';
+    const acts = it.outputUrl ? `<div class="vact"><a class="btn small" href="${esc(it.outputUrl)}" target="_blank" rel="noopener">Voir</a><a class="btn secondary small" href="${esc(it.outputUrl)}" download>Télécharger</a>${Array.isArray(it.segments) && it.segments.length ? `<button class="btn small" type="button" data-montage="${esc(it.id)}" style="flex-basis:100%">🎬 Montage</button>` : ''}<button class="btn secondary small" type="button" data-cover="${esc(it.id)}" style="flex-basis:100%">🖼️ Couverture</button></div>` : '';
     return `<article class="vitem">${libThumb(it)}<div class="vmeta"><b>${esc(it.title || 'Épisode')}${it.featured ? ' <span class="lock">★</span>' : ''}</b><small>${new Date(it.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} · ${esc(model)} · ${it.duration} s · ${it.cost} cr</small>${acts}${adminRow}</div></article>`;
   }
   function renderLibrary() {
@@ -2519,7 +2537,7 @@ footer a { color: var(--muted); }
     if (!state.me) return;
     if (state.demo) { renderAccount(); return; }
     try {
-      const d = await api('/api/library'); state.library = d.items || [];
+      const d = await api('/api/library'); state.library = withLocal(d.items || []);
       renderAccount();
     } catch (e) { $('#libraryEmpty').textContent = e.message; $('#libraryEmpty').hidden = false; }
   }
@@ -2585,6 +2603,7 @@ footer a { color: var(--muted); }
       if (e.target.closest('#btnIdea')) { state.idea = randomIdea(); const ta = $('#idea'); ta.value = state.idea; ta.classList.remove('flash'); void ta.offsetWidth; ta.classList.add('flash'); return; }
       const chip = e.target.closest('button[data-idea]'); if (chip) { state.idea = chip.dataset.idea; $('#idea').value = state.idea; if ($('#view-studio').hidden) go('studio'); else $('#idea').focus(); return; }
       const ep = e.target.closest('.ep[data-ep]'); if (ep && !ep.classList.contains('open')) { ep.classList.add('open'); ep.innerHTML = ttIframe(ep.dataset.ep); return; }
+      const mt = e.target.closest('button[data-montage]'); if (mt) { const it = state.library.find((x) => x.id === mt.dataset.montage); if (it) openEpisodeInStudio(it); return; }
       const cv = e.target.closest('button[data-cover]'); if (cv) { const it = state.library.find((x) => x.id === cv.dataset.cover); if (it) openCover({ src: it.outputUrl, segments: it.segments, poster: it.poster, title: it.title, names: namesFromPlan(it.plan) }); return; }
       const ch = e.target.closest('button[data-cover-hook]'); if (ch) { cover.top = ch.dataset.coverHook; $('#coverTop').value = cover.top; renderCoverStyles(); drawCover(); return; }
       const cs = e.target.closest('button[data-cover-style]'); if (cs) { cover.style = cs.dataset.coverStyle; renderCoverStyles(); drawCover(); return; }
