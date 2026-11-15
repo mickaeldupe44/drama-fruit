@@ -917,6 +917,7 @@ footer a { color: var(--muted); }
       <div class="plan-logline" id="planLogline"></div>
       <div class="plan-story" id="planStory" hidden></div>
       <div class="viral-box" id="viralBox" hidden></div>
+      <div class="viral-box" id="reviewBox" hidden></div>
       <div class="cast-row" id="planCast"></div>
       <div class="asset-box" id="assetBox" hidden><div class="asset-head"><b>🎨 Casting et décor créés par Grok</b><small id="assetNote"></small></div><div class="asset-grid" id="assetGrid"></div></div>
       <div class="shots" id="planShots"></div>
@@ -1762,6 +1763,8 @@ footer a { color: var(--muted); }
     $('#planStory').hidden = !p.story; $('#planStory').textContent = p.story || '';
     $('#viralBox').hidden = !p.viral;
     $('#viralBox').innerHTML = p.viral ? `<b>✨ Version boostée par l'IA</b><ul>${(p.changes || ['Scénario optimisé pour la viralité']).map((c) => `<li>${esc(c)}</li>`).join('')}</ul>` : '';
+    const rv = p.review; $('#reviewBox').hidden = !rv;
+    $('#reviewBox').innerHTML = rv ? `<b>🔎 Relu une 2e fois par ${esc(rv.by || 'l\'IA')}${rv.failed ? ' : relecture impossible, version d\'origine gardée' : (rv.fixes.length ? ` : ${rv.fixes.length} correction${rv.fixes.length > 1 ? 's' : ''}` : ' : rien à corriger')}${rv.ok ? ' ✅' : ''}</b>${rv.fixes.length ? `<ul>${rv.fixes.map((c) => `<li>${esc(c)}</li>`).join('')}</ul>` : ''}${(rv.remaining || []).length ? `<div style="margin-top:6px;color:var(--muted)">À surveiller : ${rv.remaining.map(esc).join(' · ')}</div>` : ''}` : '';
     $('#planCast').innerHTML = p.cast.map((c) => `<span class="seat"><span class="av">${seatAvatar(c)}</span>${esc(c.name)}${c.price ? `<span class="price-tag">${esc(c.price)}</span>` : ''}${c.role ? ` <small>· ${esc(c.role)}</small>` : (c.look ? ` <small>· ${esc(c.look)}</small>` : '')}</span>`).join('');
     const setName = (id, sh) => { const x = (p.sets || []).find((y) => y.id === id); return x ? x.name : ((sh && sh.setLabel) || ''); };
     $('#planShots').innerHTML = p.shots.map((s, i) => `<div class="shot"><div class="shot-head"><span>${p.pack ? 'Scène' : 'Plan'} ${i + 1}${setName(s.set, s) ? ` · <span class="shot-set">📍 ${esc(setName(s.set, s))}</span>` : ''}</span><span>${s.seconds} s</span></div><div class="visual">${esc(s.visual)}</div><div class="lines">${s.dialogue.map((d, j) => `<div class="line"><span class="who">${esc(d.who)} <small style="color:var(--muted);font-weight:400">${esc(d.tone)}</small></span>${editable ? `<input type="text" data-shot="${i}" data-line="${j}" value="${esc(d.line)}" maxlength="160" aria-label="Réplique de ${esc(d.who)}">` : `<span class="static">« ${esc(d.line)} »</span>`}</div>`).join('')}</div></div>`).join('');
@@ -1817,7 +1820,15 @@ footer a { color: var(--muted); }
     const d = await api('/api/director', { method: 'POST', body: directorBody(extra) });
     if (state.me && !state.me.admin && typeof d.balance === 'number') { state.me.credits = d.balance; renderNav(); renderCost(); }
     if (d.fallback) return viral ? viralize(localDirector(extra), extra.feedback) : localDirector(extra);
-    return d.plan && d.plan.outro !== undefined ? d.plan : attachOutro(d.plan);
+    let plan = d.plan && d.plan.outro !== undefined ? d.plan : attachOutro(d.plan);
+    if (plan && plan.pack) {
+      showProgress(0, `${state.cfg.ready.llm === 'openai' ? 'OpenAI' : 'L\'IA'} relit le scénario une 2e fois pour vérifier qu'il respecte la méthode…`, true);
+      try {
+        const r = await api('/api/review', { method: 'POST', body: Object.assign(directorBody(extra), { pack: plan.pack, changes: plan.changes }) });
+        if (r.plan) plan = r.plan; else if (r.failed) plan.review = { failed: true, fixes: [], remaining: r.remaining || [] };
+      } catch (e) { if (e.code === 'unauthorized') throw e; plan.review = { failed: true, fixes: [], remaining: [] }; }
+    }
+    return plan;
   }
 
 
