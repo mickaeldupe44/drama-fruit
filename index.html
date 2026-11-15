@@ -584,6 +584,7 @@ footer a { color: var(--muted); }
 .asset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
 .asset-grid figure { margin: 0; position: relative; border-radius: 14px; overflow: hidden; background: #000; aspect-ratio: 2 / 3; border: 1px solid var(--line); }
 .asset-grid figure.wide { aspect-ratio: 9 / 16; }
+.update-bar { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 90; display: flex; gap: 12px; align-items: center; background: var(--panel-2); border: 1px solid var(--accent); border-radius: 14px; padding: 10px 14px; box-shadow: 0 12px 30px rgba(0,0,0,.5); max-width: calc(100% - 32px); font-size: 14px; }
 .montage-opts { border: 1px solid var(--line); background: var(--panel-2); border-radius: 14px; padding: 12px 14px; margin: 10px 0; }
 .montage-opts .outro-pick button[aria-pressed="true"] { border-color: var(--accent); background: rgba(255,61,110,.15); }
 .asset-grid figure.sheet { aspect-ratio: 3 / 2; grid-column: span 2; }
@@ -2658,6 +2659,23 @@ footer a { color: var(--muted); }
   }
 
   /* ---------- Divers ---------- */
+  // Nouvelle version du site en ligne : on propose de recharger la page.
+  const BUILD = '20261115090350';
+  let updateShown = false;
+  async function checkUpdate() {
+    if (updateShown || BUILD.startsWith('__') || !/^https?:/.test(location.protocol)) return;
+    try {
+      const t = await fetch(`${location.pathname}?_v=${Date.now()}`, { cache: 'no-store' }).then((r) => r.text());
+      const m = t.match(/const BUILD = '([^']+)'/); if (!m || m[1] === BUILD || m[1].startsWith('__')) return;
+      updateShown = true;
+      const bar = document.createElement('div'); bar.className = 'update-bar';
+      bar.innerHTML = '<span>✨ Une nouvelle version du site est disponible.</span><button class="btn small" type="button">Recharger</button>';
+      bar.querySelector('button').addEventListener('click', () => { if (state.busy && !confirm('Un travail est en cours. Recharger quand même ?')) return; location.reload(); });
+      document.body.appendChild(bar);
+    } catch { /* hors ligne */ }
+  }
+  setInterval(checkUpdate, 5 * 60 * 1000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(); });
   function toast(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2200); }
   async function copyText(text, okMsg) { try { await navigator.clipboard.writeText(text); toast(okMsg); } catch { toast('Copie impossible ici : sélectionne le texte à la main.'); } }
 
