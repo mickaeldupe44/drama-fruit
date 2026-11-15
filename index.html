@@ -947,6 +947,7 @@ footer a { color: var(--muted); }
             <button type="button" data-sub-style="jaune" aria-pressed="false">🟨 Jaune TikTok</button>
             <button type="button" data-sub-style="bandeau" aria-pressed="false">⬛ Bandeau noir</button>
           </div>
+          <label class="check" id="mWordBox"><input type="checkbox" id="mWord" checked> Mot par mot, le mot dit est surligné (style TikTok)</label>
           <label class="check"><input type="checkbox" id="mMusic"> Musique sur toute la vidéo</label>
           <div id="mMusicBox" hidden>
             <div class="outro-pick" id="mTrack" style="margin:2px 0 6px">
@@ -958,9 +959,9 @@ footer a { color: var(--muted); }
             <label class="btn secondary small" id="mFileBtn" style="cursor:pointer" hidden>🎵 Choisir ma musique (MP3)<input type="file" id="mMusicFile" accept="audio/*" hidden></label>
             <span id="mMusicName" class="note" style="margin-left:6px"></span>
             <audio id="mAudio" preload="none" hidden></audio>
-            <label class="field" for="mMusicVol">Volume de la musique <small id="mMusicVolTxt">20 %</small></label>
-            <input type="range" id="mMusicVol" min="5" max="100" step="5" value="20" style="width:100%;accent-color:var(--accent)">
-            <p class="note" style="margin:4px 0 0">La musique reste en fond, sous les voix, et tourne en boucle jusqu'à la fin.</p>
+            <label class="field" for="mMusicVol">Volume de la musique <small id="mMusicVolTxt">25 %</small></label>
+            <input type="range" id="mMusicVol" min="5" max="100" step="5" value="25" style="width:100%;accent-color:var(--accent)">
+            <p class="note" style="margin:4px 0 0">La musique tourne en boucle, baisse toute seule quand les personnages parlent et s'éteint en fondu à la fin.</p>
           </div>
           <div class="actions"><button class="btn small" id="btnMontageGo" type="button">🎬 Lancer le montage</button></div>
         </div>
@@ -2175,41 +2176,80 @@ footer a { color: var(--muted); }
     return ffmpegP;
   }
   const TRACKS = { trend: { name: 'trend dramafruit', src: 'media/music/trend-dramafruit.mp3' }, karmin: { name: 'karmin', src: 'media/music/karmin.mp3' } };
-  const montageOpt = { subs: true, style: 'blanc', music: false, track: 'trend', file: null, vol: 20 };
+  const montageOpt = { subs: true, wordMode: true, style: 'blanc', music: false, track: 'trend', file: null, vol: 25 };
   function clipDuration(buf) {
     return new Promise((resolve) => { const v = document.createElement('video'); const u = URL.createObjectURL(new Blob([buf], { type: 'video/mp4' })); v.preload = 'metadata'; v.onloadedmetadata = () => { resolve({ d: v.duration || 6, w: v.videoWidth || 720, h: v.videoHeight || 1280 }); URL.revokeObjectURL(u); }; v.onerror = () => { resolve({ d: 6, w: 720, h: 1280 }); URL.revokeObjectURL(u); }; v.src = u; });
   }
-  // Une image PNG transparente par réplique, posée sur la vidéo au bon moment.
-  async function subtitlePng(text, W, style) {
-    await (document.fonts && document.fonts.load ? document.fonts.load('64px Anton').catch(() => {}) : null);
-    const c = document.createElement('canvas'); const ctx = c.getContext('2d');
-    const maxW = W * 0.86; const f = (() => { ctx.font = `${Math.round(W * 0.062)}px Anton, Impact, 'Arial Black', sans-serif`; return fitFont(ctx, text.toUpperCase(), maxW, 3, Math.round(W * 0.066), Math.round(W * 0.042)); })();
-    const lh = f.size * 1.12; const pad = Math.round(f.size * 0.45);
-    c.width = W; c.height = Math.ceil(f.lines.length * lh + pad * 2);
-    ctx.font = `${f.size}px Anton, Impact, 'Arial Black', sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
-    if (style === 'bandeau') {
-      const w = Math.min(W - 20, Math.max(...f.lines.map((l) => ctx.measureText(l).width)) + pad * 2);
-      ctx.fillStyle = 'rgba(0,0,0,.72)'; roundRect(ctx, (W - w) / 2, 0, w, c.height, Math.round(f.size * 0.3)); ctx.fill();
+  // Sous-titres : une image PNG transparente par moment (même taille pour toutes), le mot dit peut être surligné.
+  const SUB_COLORS = { blanc: { base: '#fff', hi: '#ffe600' }, jaune: { base: '#ffe600', hi: '#fff' }, bandeau: { base: '#fff', hi: '#ffe600' } };
+  function subBox(W) { const size = Math.round(W * 0.078); return { size, lh: Math.round(size * 1.14), pad: Math.round(size * 0.42), h: Math.round(size * 1.14) * 3 + Math.round(size * 0.42) * 2 }; }
+  async function subtitlePng(words, hi, W, style) {
+    const B = subBox(W); const c = document.createElement('canvas'); c.width = W; c.height = B.h; const ctx = c.getContext('2d');
+    if (!words.length) { const blob0 = await new Promise((r) => c.toBlob(r, 'image/png')); return new Uint8Array(await blob0.arrayBuffer()); }
+    const col = SUB_COLORS[style] || SUB_COLORS.blanc; const maxW = W * 0.86;
+    let size = B.size; let lines;
+    for (;;) {
+      ctx.font = `${size}px Anton, Impact, 'Arial Black', sans-serif`; const sp = ctx.measureText(' ').width;
+      lines = []; let cur = []; let cw = 0;
+      words.forEach((w, i) => { const ww = ctx.measureText(w.toUpperCase()).width; if (cur.length && cw + sp + ww > maxW) { lines.push(cur); cur = []; cw = 0; } cur.push(i); cw += (cur.length > 1 ? sp : 0) + ww; });
+      if (cur.length) lines.push(cur);
+      if (lines.length <= 3 || size <= B.size * 0.6) break; size -= 4;
     }
-    f.lines.forEach((l, i) => {
-      const y = pad + lh * i + lh / 2;
-      if (style !== 'bandeau') { ctx.lineWidth = Math.max(6, f.size * 0.16); ctx.strokeStyle = '#000'; ctx.strokeText(l, W / 2, y); }
-      ctx.fillStyle = style === 'jaune' ? '#ffe600' : '#fff'; ctx.fillText(l, W / 2, y);
+    lines = lines.slice(0, 3);
+    const lh = size * 1.14; const sp = ctx.measureText(' ').width; const top = (B.h - lines.length * lh) / 2;
+    ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+    if (style === 'bandeau') {
+      const wmax = Math.max(...lines.map((ln) => ln.reduce((t, i, k) => t + ctx.measureText(words[i].toUpperCase()).width + (k ? sp : 0), 0)));
+      const bw = Math.min(W - 20, wmax + B.pad * 2); ctx.fillStyle = 'rgba(0,0,0,.72)'; roundRect(ctx, (W - bw) / 2, top - B.pad * 0.6, bw, lines.length * lh + B.pad * 1.2, Math.round(size * 0.3)); ctx.fill();
+    }
+    lines.forEach((ln, li) => {
+      const ws = ln.map((i) => words[i].toUpperCase()); const tw = ws.reduce((t, w, k) => t + ctx.measureText(w).width + (k ? sp : 0), 0);
+      let x = (W - tw) / 2; const y = top + lh * li + lh / 2;
+      ln.forEach((i, k) => {
+        const w = ws[k]; const ww = ctx.measureText(w).width; const isHi = i === hi;
+        if (isHi && style !== 'bandeau') { ctx.save(); ctx.fillStyle = 'rgba(255,61,110,.92)'; roundRect(ctx, x - size * 0.12, y - lh * 0.48 - size * 0.1, ww + size * 0.24, lh * 0.9, size * 0.18); ctx.fill(); ctx.restore(); }
+        if (style !== 'bandeau') { ctx.lineWidth = Math.max(6, size * 0.17); ctx.strokeStyle = '#000'; ctx.strokeText(w, x, y); }
+        ctx.fillStyle = isHi ? (style === 'bandeau' ? col.hi : '#fff') : col.base; ctx.fillText(w, x, y);
+        x += ww + sp;
+      });
     });
     const blob = await new Promise((r) => c.toBlob(r, 'image/png'));
     return new Uint8Array(await blob.arrayBuffer());
   }
-  // Les répliques de chaque scène, réparties dans la durée de la scène selon leur nombre de mots.
-  function subtitleCues(durations) {
+  // Où l'on parle vraiment dans chaque scène (détection des silences de la piste son).
+  async function speechRange(ff, file, dur) {
+    const logs = []; const onLog = ({ message }) => logs.push(message); ff.on('log', onLog);
+    try { await ff.exec(['-hide_banner', '-i', file, '-vn', '-af', 'silencedetect=noise=-32dB:d=0.3', '-f', 'null', '-']); } catch { /* ignore */ }
+    ff.off('log', onLog);
+    const sil = []; let open = null;
+    logs.forEach((l) => { let m = l.match(/silence_start: ([\d.]+)/); if (m) open = Number(m[1]); m = l.match(/silence_end: ([\d.]+)/); if (m && open !== null) { sil.push([open, Number(m[1])]); open = null; } });
+    if (open !== null) sil.push([open, dur]);
+    let a = 0.2, z = dur - 0.15;
+    if (sil.length && sil[0][0] < 0.15) a = Math.min(dur * 0.5, sil[0][1]);
+    if (sil.length && sil[sil.length - 1][1] > dur - 0.2) z = Math.max(a + 1, sil[sil.length - 1][0]);
+    if (z - a < dur * 0.35) { a = 0.2; z = dur - 0.15; }
+    return [a, z];
+  }
+  // Les répliques réparties sur les vraies paroles, en petits groupes de mots comme sur TikTok.
+  function subtitleCues(durations, ranges, wordMode) {
     const shots = (state.lastJob && state.lastJob.plan && state.lastJob.plan.shots) || (state.plan && state.plan.shots) || [];
-    const total = durations.reduce((a, d) => a + d, 0); const cues = [];
+    const total = durations.reduce((t, d) => t + d, 0); const cues = [];
     let spans;
-    if (shots.length === durations.length) { let t = 0; spans = durations.map((d) => { const r = [t, t + d]; t += d; return r; }); }
-    else { const sum = shots.reduce((a, x) => a + (Number(x.seconds) || 6), 0) || 1; let t = 0; spans = shots.map((x) => { const d = (Number(x.seconds) || 6) * total / sum; const r = [t, t + d]; t += d; return r; }); }
+    if (shots.length === durations.length) { let t = 0; spans = durations.map((d, i) => { const r = ranges && ranges[i] ? [t + ranges[i][0], t + ranges[i][1]] : [t + 0.25, t + d - 0.15]; t += d; return r; }); }
+    else { const sum = shots.reduce((t, x) => t + (Number(x.seconds) || 6), 0) || 1; let t = 0; spans = shots.map((x) => { const d = (Number(x.seconds) || 6) * total / sum; const r = [t + 0.25, t + d - 0.15]; t += d; return r; }); }
+    const weight = (w) => w.replace(/[^\p{L}\p{N}]/gu, '').length + 2;
     shots.forEach((sh, i) => {
       const lines = (sh.dialogue || []).filter((d) => d && d.line); if (!lines.length || !spans[i]) return;
-      const [a, z] = spans[i]; const start = a + 0.25, end = z - 0.15; const words = lines.map((d) => Math.max(1, d.line.split(/\s+/).length)); const wsum = words.reduce((x, y) => x + y, 0);
-      let t = start; lines.forEach((d, k) => { const len = (end - start) * words[k] / wsum; cues.push({ text: d.line, a: t, z: t + len - 0.05 }); t += len; });
+      const [a, z] = spans[i]; const all = lines.map((d) => d.line.split(/\s+/).filter(Boolean));
+      const wsum = all.reduce((t, ws) => t + ws.reduce((u, w) => u + weight(w), 0), 0) || 1; const gap = lines.length > 1 ? 0.12 : 0;
+      const per = (z - a - gap * (lines.length - 1)) / wsum; let t = a;
+      all.forEach((ws) => {
+        if (!wordMode) { const len = ws.reduce((u, w) => u + weight(w), 0) * per; cues.push({ a: t, z: t + len, words: ws, hi: -1 }); t += len + gap; return; }
+        const chunks = []; let cur = [];
+        ws.forEach((w) => { cur.push(w); if (cur.length >= 3 || /[.!?…,;:]$/.test(w)) { chunks.push(cur); cur = []; } }); if (cur.length) chunks.push(cur);
+        chunks.forEach((ch) => ch.forEach((w, k) => { const len = weight(w) * per; cues.push({ a: t, z: t + len, words: ch, hi: k }); t += len; }));
+        t += gap;
+      });
     });
     return cues;
   }
@@ -2255,28 +2295,51 @@ footer a { color: var(--muted); }
       const logs = []; const onLog = ({ message }) => logs.push(message); ff.on('log', onLog);
       await ff.exec(['-hide_banner', '-i', 'joined.mp4']); ff.off('log', onLog);
       const hasAudio = logs.some((l) => /Stream #0:\d.*Audio/.test(l));
-      const cues = o.subs ? subtitleCues(metas.map((m) => m.d)) : [];
+      const durs = metas.map((m) => m.d); const T = durs.reduce((t, d) => t + d, 0);
+      let cues = [];
+      if (o.subs) {
+        const ranges = [];
+        if (hasAudio) for (let i = 0; i < n; i++) { showProgress((n + 0.5) / steps, `Écoute des voix, scène ${i + 1}/${n}…`); ranges.push(await speechRange(ff, files[i], durs[i])); }
+        cues = subtitleCues(durs, hasAudio ? ranges : null, o.wordMode);
+      }
       if (cues.length || o.music) {
-        const args = ['-i', 'joined.mp4']; let idx = 1; let musicIdx = -1;
+        const args = ['-i', 'joined.mp4']; let idx = 1; let musicIdx = -1; let subIdx = -1; const subFiles = [];
         if (o.music) { const mb = o.track === 'file' ? await o.file.arrayBuffer() : await fetch(TRACKS[o.track].src).then((r) => { if (!r.ok) throw new Error('Musique introuvable.'); return r.arrayBuffer(); }); await ff.writeFile('music', new Uint8Array(mb)); args.push('-stream_loop', '-1', '-i', 'music'); musicIdx = idx++; }
-        const parts = []; let vLabel = '0:v:0';
-        for (let k = 0; k < cues.length; k++) {
-          showProgress((n + 1) / steps, `Sous-titres ${k + 1}/${cues.length}…`);
-          const name = `sub${k}.png`; await ff.writeFile(name, await subtitlePng(cues[k].text, W, o.style)); args.push('-i', name);
-          const out = `v${k}`; parts.push(`[${vLabel}][${idx}:v]overlay=x=(main_w-overlay_w)/2:y=main_h*0.66:enable='between(t,${cues[k].a.toFixed(2)},${cues[k].z.toFixed(2)})'[${out}]`); vLabel = out; idx++;
+        if (cues.length) {
+          // Une seule piste d'images de sous-titres (les blancs entre les répliques sont transparents).
+          await ff.writeFile('blank.png', await subtitlePng([], -1, W, o.style)); subFiles.push('blank.png');
+          const list = ['ffconcat version 1.0']; let t = 0;
+          for (let k = 0; k < cues.length; k++) {
+            if (k % 10 === 0) showProgress((n + 1) / steps, `Préparation des sous-titres ${k + 1}/${cues.length}…`);
+            const c = cues[k]; const a0 = Math.max(t, c.a); const z0 = Math.min(T, Math.max(a0 + 0.06, c.z));
+            if (a0 - t > 0.02) list.push("file 'blank.png'", `duration ${(a0 - t).toFixed(3)}`);
+            const name = `sub${k}.png`; await ff.writeFile(name, await subtitlePng(c.words, c.hi, W, o.style)); subFiles.push(name);
+            list.push(`file '${name}'`, `duration ${(z0 - a0).toFixed(3)}`); t = z0;
+          }
+          list.push("file 'blank.png'", `duration ${Math.max(0.1, T - t + 0.5).toFixed(3)}`, "file 'blank.png'");
+          await ff.writeFile('subs.txt', list.join('\n'));
+          args.push('-f', 'concat', '-safe', '0', '-i', 'subs.txt'); subIdx = idx++;
         }
+        const parts = []; let vLabel = '0:v:0';
+        if (subIdx >= 0) { parts.push(`[${subIdx}:v]format=rgba[subs];[0:v:0][subs]overlay=x=(main_w-overlay_w)/2:y=main_h*0.6:eof_action=pass:format=auto[vout]`); vLabel = 'vout'; }
         let aLabel = hasAudio ? '0:a:0' : null;
-        if (o.music) { parts.push(hasAudio ? `[${musicIdx}:a]volume=${(o.vol / 100).toFixed(2)}[mus];[0:a:0][mus]amix=inputs=2:duration=first:dropout_transition=0:normalize=0[aout]` : `[${musicIdx}:a]volume=${Math.max(0.5, o.vol / 100).toFixed(2)}[aout]`); aLabel = 'aout'; }
+        if (o.music) {
+          const fadeOut = `afade=t=out:st=${Math.max(0, T - 1.5).toFixed(2)}:d=1.5`;
+          if (hasAudio) parts.push(`[${musicIdx}:a]aresample=44100,volume=${(o.vol / 100).toFixed(2)},afade=t=in:d=0.8[mus];[0:a:0]aresample=44100,asplit=2[vo][sc];[mus][sc]sidechaincompress=threshold=0.02:ratio=6:attack=20:release=400[duck];[vo][duck]amix=inputs=2:duration=first:dropout_transition=0:normalize=0,${fadeOut}[aout]`);
+          else parts.push(`[${musicIdx}:a]volume=${Math.max(0.5, o.vol / 100).toFixed(2)},afade=t=in:d=0.8,atrim=0:${T.toFixed(2)},${fadeOut}[aout]`);
+          aLabel = 'aout';
+        }
         const fa = [...args];
         if (parts.length) fa.push('-filter_complex', parts.join(';'));
         fa.push('-map', vLabel === '0:v:0' ? '0:v:0' : `[${vLabel}]`); if (aLabel) fa.push('-map', aLabel === '0:a:0' ? '0:a:0' : `[${aLabel}]`);
-        fa.push(...(cues.length ? ['-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '21'] : ['-c:v', 'copy']), ...(aLabel ? ['-c:a', 'aac', '-b:a', '160k'] : ['-an']), '-shortest', '-movflags', '+faststart', 'final.mp4');
+        fa.push(...(cues.length ? ['-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '21', '-pix_fmt', 'yuv420p'] : ['-c:v', 'copy']), ...(aLabel ? ['-c:a', 'aac', '-b:a', '160k'] : ['-an']), '-t', T.toFixed(2), '-movflags', '+faststart', 'final.mp4');
         setProg(prog(n + 1, cues.length ? 'Incrustation des sous-titres' : 'Ajout de la musique'));
         code = await ff.exec(fa);
         const fin = code === 0 ? await ff.readFile('final.mp4').catch(() => null) : null;
         if (!fin || fin.length < 1000) throw new Error('L\'ajout des sous-titres ou de la musique a échoué.');
         data = fin;
-        for (let k = 0; k < cues.length; k++) await ff.deleteFile(`sub${k}.png`).catch(() => {});
+        for (const f of subFiles) await ff.deleteFile(f).catch(() => {});
+        await ff.deleteFile('subs.txt').catch(() => {});
         await ff.deleteFile('final.mp4').catch(() => {}); if (o.music) await ff.deleteFile('music').catch(() => {});
       }
       setProg(null);
@@ -2648,7 +2711,8 @@ footer a { color: var(--muted); }
     $('#btnNew').addEventListener('click', () => { state.plan = null; state.lastJob = null; $('#studioRun').hidden = true; $('#idea').value = ''; state.idea = ''; $('#idea').focus(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
     $('#btnMontage').addEventListener('click', openMontageOpts);
     $('#btnMontageGo').addEventListener('click', montage);
-    $('#mSubs').addEventListener('change', (e) => { montageOpt.subs = e.target.checked; $('#mSubStyle').hidden = !e.target.checked; });
+    $('#mSubs').addEventListener('change', (e) => { montageOpt.subs = e.target.checked; $('#mSubStyle').hidden = !e.target.checked; $('#mWordBox').hidden = !e.target.checked; });
+    $('#mWord').addEventListener('change', (e) => { montageOpt.wordMode = e.target.checked; });
     $('#mSubStyle').addEventListener('click', (e) => { const b = e.target.closest('button[data-sub-style]'); if (!b) return; montageOpt.style = b.dataset.subStyle; $$('#mSubStyle button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); });
     $('#mMusic').addEventListener('change', (e) => { montageOpt.music = e.target.checked; $('#mMusicBox').hidden = !e.target.checked; });
     $('#mMusicFile').addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; montageOpt.file = f || null; $('#mMusicName').textContent = f ? f.name : ''; $('#mPreview').hidden = !f; });
