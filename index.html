@@ -949,8 +949,15 @@ footer a { color: var(--muted); }
           </div>
           <label class="check"><input type="checkbox" id="mMusic"> Musique sur toute la vidéo</label>
           <div id="mMusicBox" hidden>
-            <label class="btn secondary small" style="cursor:pointer">🎵 Choisir ma musique (MP3)<input type="file" id="mMusicFile" accept="audio/*" hidden></label>
+            <div class="outro-pick" id="mTrack" style="margin:2px 0 6px">
+              <button type="button" data-track="trend" aria-pressed="true">🔥 trend dramafruit</button>
+              <button type="button" data-track="karmin" aria-pressed="false">🎤 karmin</button>
+              <button type="button" data-track="file" aria-pressed="false">📁 Ma musique</button>
+            </div>
+            <button class="btn secondary small" id="mPreview" type="button">▶ Écouter</button>
+            <label class="btn secondary small" id="mFileBtn" style="cursor:pointer" hidden>🎵 Choisir ma musique (MP3)<input type="file" id="mMusicFile" accept="audio/*" hidden></label>
             <span id="mMusicName" class="note" style="margin-left:6px"></span>
+            <audio id="mAudio" preload="none" hidden></audio>
             <label class="field" for="mMusicVol">Volume de la musique <small id="mMusicVolTxt">20 %</small></label>
             <input type="range" id="mMusicVol" min="5" max="100" step="5" value="20" style="width:100%;accent-color:var(--accent)">
             <p class="note" style="margin:4px 0 0">La musique reste en fond, sous les voix, et tourne en boucle jusqu'à la fin.</p>
@@ -2167,7 +2174,8 @@ footer a { color: var(--muted); }
     });
     return ffmpegP;
   }
-  const montageOpt = { subs: true, style: 'blanc', music: false, file: null, vol: 20 };
+  const TRACKS = { trend: { name: 'trend dramafruit', src: 'media/music/trend-dramafruit.mp3' }, karmin: { name: 'karmin', src: 'media/music/karmin.mp3' } };
+  const montageOpt = { subs: true, style: 'blanc', music: false, track: 'trend', file: null, vol: 20 };
   function clipDuration(buf) {
     return new Promise((resolve) => { const v = document.createElement('video'); const u = URL.createObjectURL(new Blob([buf], { type: 'video/mp4' })); v.preload = 'metadata'; v.onloadedmetadata = () => { resolve({ d: v.duration || 6, w: v.videoWidth || 720, h: v.videoHeight || 1280 }); URL.revokeObjectURL(u); }; v.onerror = () => { resolve({ d: 6, w: 720, h: 1280 }); URL.revokeObjectURL(u); }; v.src = u; });
   }
@@ -2213,7 +2221,8 @@ footer a { color: var(--muted); }
     const j = state.lastJob; if (!j || !Array.isArray(j.segments) || !j.segments.length || state.busy) return;
     if (state.demo) { info($('#montageInfo'), 'Aperçu : le montage marche sur le site en ligne.'); return; }
     const o = montageOpt;
-    if (o.music && !o.file) { info($('#montageInfo'), 'Choisis d\'abord un fichier de musique, ou décoche « Musique ».'); return; }
+    if (o.music && o.track === 'file' && !o.file) { info($('#montageInfo'), 'Choisis d\'abord ton fichier de musique, ou prends « trend dramafruit » ou « karmin ».'); return; }
+    $('#mAudio').pause(); $('#mPreview').textContent = '▶ Écouter';
     state.busy = true; $('#btnMontage').disabled = true; $('#btnMontageGo').disabled = true; info($('#montageInfo'), '');
     const n = j.segments.length; const steps = n + 3;
     try {
@@ -2249,7 +2258,7 @@ footer a { color: var(--muted); }
       const cues = o.subs ? subtitleCues(metas.map((m) => m.d)) : [];
       if (cues.length || o.music) {
         const args = ['-i', 'joined.mp4']; let idx = 1; let musicIdx = -1;
-        if (o.music) { await ff.writeFile('music', new Uint8Array(await o.file.arrayBuffer())); args.push('-stream_loop', '-1', '-i', 'music'); musicIdx = idx++; }
+        if (o.music) { const mb = o.track === 'file' ? await o.file.arrayBuffer() : await fetch(TRACKS[o.track].src).then((r) => { if (!r.ok) throw new Error('Musique introuvable.'); return r.arrayBuffer(); }); await ff.writeFile('music', new Uint8Array(mb)); args.push('-stream_loop', '-1', '-i', 'music'); musicIdx = idx++; }
         const parts = []; let vLabel = '0:v:0';
         for (let k = 0; k < cues.length; k++) {
           showProgress((n + 1) / steps, `Sous-titres ${k + 1}/${cues.length}…`);
@@ -2642,7 +2651,9 @@ footer a { color: var(--muted); }
     $('#mSubs').addEventListener('change', (e) => { montageOpt.subs = e.target.checked; $('#mSubStyle').hidden = !e.target.checked; });
     $('#mSubStyle').addEventListener('click', (e) => { const b = e.target.closest('button[data-sub-style]'); if (!b) return; montageOpt.style = b.dataset.subStyle; $$('#mSubStyle button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); });
     $('#mMusic').addEventListener('change', (e) => { montageOpt.music = e.target.checked; $('#mMusicBox').hidden = !e.target.checked; });
-    $('#mMusicFile').addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; montageOpt.file = f || null; $('#mMusicName').textContent = f ? f.name : ''; });
+    $('#mMusicFile').addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; montageOpt.file = f || null; $('#mMusicName').textContent = f ? f.name : ''; $('#mPreview').hidden = !f; });
+    $('#mTrack').addEventListener('click', (e) => { const b = e.target.closest('button[data-track]'); if (!b) return; montageOpt.track = b.dataset.track; $$('#mTrack button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); const own = montageOpt.track === 'file'; $('#mFileBtn').hidden = !own; $('#mMusicName').hidden = !own; $('#mAudio').pause(); $('#mPreview').textContent = '▶ Écouter'; $('#mPreview').hidden = own && !montageOpt.file; if (own && !montageOpt.file) $('#mMusicFile').click(); });
+    $('#mPreview').addEventListener('click', () => { const a = $('#mAudio'); if (!a.paused) { a.pause(); $('#mPreview').textContent = '▶ Écouter'; return; } const t = montageOpt.track; const src = t === 'file' ? (montageOpt.file ? URL.createObjectURL(montageOpt.file) : '') : TRACKS[t].src; if (!src) return; a.src = src; a.volume = 0.6; a.onended = () => { $('#mPreview').textContent = '▶ Écouter'; }; a.play().catch(() => {}); $('#mPreview').textContent = '⏸ Stop'; });
     $('#mMusicVol').addEventListener('input', (e) => { montageOpt.vol = Number(e.target.value); $('#mMusicVolTxt').textContent = `${montageOpt.vol} %`; });
     $('#btnCover').addEventListener('click', () => { const j = state.lastJob || {}; const pl = j.plan || state.plan || {}; openCover({ src: j.montageUrl || j.outputUrl, segments: j.montageUrl ? [j.montageUrl] : j.segments, stills: (state.packAssets && state.packAssets.scenes) || [], titleIsHook: Boolean(pl.couverture), title: pl.couverture || j.title || pl.title, names: namesFromPlan(pl), bottom: pl.outro && pl.outro.type === 'like' ? 'PARTIE 1' : 'PARTIE 1' }); });
     $('#epCover').addEventListener('click', () => { const t = ($('#epTitle').textContent || '').replace(/[«»]/g, '').trim(); const n = (($('#epVideo').getAttribute('src') || '').match(/episode-(\d+)/) || [])[1] || '1'; openCover({ src: `media/episode-${n}.mp4`, poster: `media/episode-${n}.jpg`, title: t }); });
