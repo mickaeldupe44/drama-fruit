@@ -2288,7 +2288,17 @@ footer a { color: var(--muted); }
   }
   function loadSeg(k, randomTime) {
     const v = $('#coverVideo'); cover.seg = k; cover.randomTime = Boolean(randomTime); cover.ready = false;
-    mediaUrl(cover.segs[k]).then((u) => { v.src = u || ''; if (u) v.load(); });
+    const src = cover.segs[k];
+    if (!src || /^(blob|data):/.test(src) || (() => { try { return new URL(src, location.href).origin === location.origin; } catch { return true; } })()) { v.src = src || ''; if (src) v.load(); return; }
+    cover.blobs = cover.blobs || {};
+    if (cover.blobs[src]) { v.src = cover.blobs[src]; v.load(); return; }
+    info($('#coverInfo'), 'Chargement de la vidéo…');
+    // On télécharge la scène en entier puis on la lit en local : plus de blocage du navigateur.
+    mediaUrl(src).then((u) => fetch(u)).then(async (r) => {
+      if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || `erreur ${r.status}`); }
+      const b = await r.blob(); if (!b.size) throw new Error('vidéo vide');
+      cover.blobs[src] = URL.createObjectURL(b); if (cover.seg === k) { v.src = cover.blobs[src]; v.load(); }
+    }).catch((e) => { cover.loadError = e.message || String(e); v.onerror(); });
   }
   function openCover(opts) {
     cover.src = opts.src || ''; cover.poster = opts.poster || ''; cover.title = opts.title || '';
@@ -2307,7 +2317,7 @@ footer a { color: var(--muted); }
     if (cover.poster) { const pi = new Image(); pi.onload = () => { if (!cover.ready && !cover.img) { cover.posterImg = pi; drawCover(); } }; pi.src = cover.poster; }
     v.onloadedmetadata = () => { const d = v.duration || 10; $('#coverTime').max = String(Math.max(0.1, d - 0.1)); const t = cover.randomTime ? Math.random() * (d - 0.2) : Math.min(d - 0.1, d * 0.38); $('#coverTime').value = String(t); v.currentTime = t; };
     v.onseeked = () => { cover.ready = true; if (!cover.keepStill) cover.img = null; cover.keepStill = false; drawCover(); info($('#coverInfo'), ''); };
-    v.onerror = () => { if (!cover.segs.length) return; info($('#coverInfo'), cover.stills.length ? 'La vidéo ne se lit pas ici : choisis plutôt une des images de scène ci-dessus.' : 'Impossible de lire cette vidéo ici. Utilise « Mon image » avec une capture d\'écran de l\'épisode.'); };
+    v.onerror = () => { if (!cover.segs.length) return; const why = cover.loadError ? ` (${cover.loadError})` : ''; cover.loadError = ''; info($('#coverInfo'), cover.stills.length ? `La vidéo ne se lit pas ici${why} : choisis plutôt une des images de scène ci-dessus.` : `Impossible de lire cette vidéo ici${why}. Si l'épisode a plus de 24 h, la vidéo a peut-être expiré chez Grok : relance la création ou utilise « Mon image ».`); };
     cover.keepStill = Boolean(cover.stills.length);
     if (cover.stills.length) loadStill(Math.min(cover.stills.length - 1, Math.floor(cover.stills.length * 0.38)));
     if (cover.segs.length) loadSeg(cover.stills.length ? Math.min(cover.segs.length - 1, Math.floor(cover.segs.length * 0.38)) : 0, false); else v.removeAttribute('src');
@@ -2374,7 +2384,6 @@ footer a { color: var(--muted); }
       roundRect(ctx, -bw / 2, -bh / 2, bw, bh, 26); ctx.fill();
       ctx.fillStyle = cover.style === 'jaune' ? '#000' : '#fff'; ctx.fillText(bottom, 0, 6); ctx.restore();
     }
-    ctx.font = '700 40px Figtree, Arial, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.fillText('@dramafruit', W / 2, H - 110);
   }
   function roundRect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
   function downloadCover() {
