@@ -62,7 +62,7 @@ Tant que les réglages Supabase ne sont pas sur Vercel, le site reste en **mode 
 Ce que fait le mode payant :
 - un compte par e-mail, 35 crédits offerts à l'inscription ;
 - un épisode se paie en entier, une seule fois, au début du tournage ; une scène que Grok ne livre pas est remboursée toute seule ; « Refaire » une scène et « Améliorer avec l'IA » se paient à part ; écrire ou réécrire un scénario reste gratuit ;
-- chaque formule a ses limites (durée, modèles, HD, 1 épisode par jour en Découverte) ;
+- chaque formule a ses limites (durée, modèles, 1 épisode par jour en Découverte) ; il n'y a pas d'option HD pour l'instant, car Grok Imagine 1.5 est limité à 720p et le « 1080p » de Lite coûte au site près de 5 fois plus cher pour un simple agrandissement ;
 - les crédits achetés n'arrivent sur un compte que par les notifications signées de Stripe ;
 - les épisodes sont gardés sur le compte ; la vidéo montée est déposée dans Supabase pour les formules avec vidéothèque.
 
@@ -74,7 +74,7 @@ Ce que le serveur fait déjà :
 - les clés (xAI, OpenAI, Supabase « service », Stripe) ne sont que dans Vercel et ne sont jamais envoyées au site ;
 - les crédits ne bougent que côté serveur : un épisode se paie une fois, la différence est débitée si on demande ensuite plus que ce qui a été payé (plus de scènes, modèle plus cher, HD), et le nombre d'images et de clips par épisode est plafonné ;
 - un remboursement ne porte que sur un clip lancé et payé par le compte, au prix payé, une seule fois ;
-- écrire, relire et vérifier un scénario est gratuit mais plafonné par jour et par compte ;
+- écrire, relire et vérifier un scénario est offert dans la limite d'un quota mensuel par compte (crédits de la formule ÷ 6, 12 appels au minimum) ; au-delà, chaque appel coûte 2 crédits, un peu plus que son prix de revient ;
 - les crédits achetés n'arrivent que par les notifications signées de Stripe, et une notification rejouée ne compte pas deux fois ;
 - un compte dont l'e-mail n'est pas confirmé n'a accès à rien ;
 - le relais `/api/media` ne sert que les vidéos de Grok (x.ai) et le stockage du site ;
@@ -86,6 +86,16 @@ Ce qu'il te reste à régler toi-même :
 - **Supabase → Authentication** : laisse « Confirm email » activé et active la protection CAPTCHA, sinon n'importe qui peut créer des comptes à la chaîne pour récupérer les crédits offerts ;
 - **Vercel** : règle `SITE_URL` sur l'adresse du site ;
 - **xAI et OpenAI** : fixe un plafond de dépense mensuel dans chaque tableau de bord. C'est le dernier filet si quelque chose échappe au reste.
+
+## Ne pas vendre à perte
+
+Prix de revient relevés le 17 novembre 2026 (en dollars) : Grok Imagine 1.5 en 720p 0,14 $ la seconde, Lite 0,03 $ ; une image OpenAI en qualité « medium » environ 0,04 à 0,08 $ ; un scénario écrit et relu environ 0,20 $.
+
+Au pire des cas, un crédit dépensé coûte au site environ 0,04 $, et un crédit vendu rapporte au moins 0,063 € une fois retirés les frais Stripe et 20 % de TVA. Pour que cela reste vrai :
+- garder les images en qualité « medium » (`OPENAI_IMAGE_QUALITY` et `OPENAI_SCENE_QUALITY`) : en « high », une image de scène coûte plus que les 3 crédits demandés ;
+- garder une clé OpenAI : sans elle, les images passent par Grok et coûtent environ le double ;
+- revoir `lib/offer.js` (et `DEFAULT_OFFER` dans `index.html`) si xAI ou OpenAI changent leurs tarifs, ou si on remet une option HD ;
+- le seul cadeau est l'épisode offert à l'inscription (environ 1 $ par nouveau compte).
 
 ## Fichiers
 - `index.html` et `media/` : le site.
