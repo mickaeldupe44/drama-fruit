@@ -20,8 +20,9 @@ export default async function handler(req, res) {
   if (b.previousPlan && b.previousPlan.pack) {
     user += `\n\n=== VERSION ACTUELLE À AMÉLIORER ===\n${JSON.stringify(b.previousPlan.pack).slice(0, 30000)}\n\n${b.viral ? 'Réécris ce PACK pour le rendre encore plus viral (accroche plus forte, relances plus nettes, punchline plus citable), en suivant la méthode.' : 'Corrige ce PACK.'}${b.feedback ? ` Remarques de l'utilisateur à appliquer : ${String(b.feedback).slice(0, 1500)}` : ''} Ajoute "changes": [string] à la racine, la liste en français de ce que tu as changé.`;
   }
+  const info = {}; const t0 = Date.now();
   const askModel = async (model, json) => {
-    const reasoning = /^(gpt-5|o\d)/.test(model) ? { reasoning_effort: 'low' } : { temperature: 0.9 };
+    const reasoning = /^(gpt-5|o\d)/.test(model) ? { reasoning_effort: env('DIRECTOR_EFFORT') || 'low' } : { temperature: 0.9 };
     const r = await fetch(llm.url, {
       method: 'POST',
       headers: { Authorization: `Bearer ${llm.key}`, 'Content-Type': 'application/json' },
@@ -29,6 +30,8 @@ export default async function handler(req, res) {
     });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) { const e = new Error((d.error && (d.error.message || d.error)) || d.message || `${llm.name} ${r.status}`); e.status = r.status; throw e; }
+    const u = d.usage || {};
+    Object.assign(info, { model: d.model || model, effort: reasoning.reasoning_effort || null, jetons_lus: u.prompt_tokens, jetons_ecrits: u.completion_tokens, dont_reflexion: (u.completion_tokens_details || {}).reasoning_tokens });
     return String(d.choices[0].message.content || '');
   };
   const ask = async (json) => {
@@ -46,7 +49,8 @@ export default async function handler(req, res) {
     const plan = packToPlan(pack);
     if (Array.isArray(pack.changes)) plan.changes = pack.changes;
     if (b.viral) plan.viral = true;
-    send(res, 200, { plan, balance: 9999 });
+    info.secondes = Math.round((Date.now() - t0) / 100) / 10;
+    send(res, 200, { plan, balance: 9999, meta: info });
   } catch (e) {
     console.error('director', e);
     send(res, 200, { fallback: true, warning: String(e.message || e) });

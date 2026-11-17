@@ -35,6 +35,17 @@ Le site demande maintenant une résolution à Grok pour chaque clip. Avant, il n
 - Prix xAI par seconde de vidéo, relevés sur docs.x.ai en novembre 2026 : Grok Imagine 1.5 = 0,087 $ en 480p, 0,14 $ en 720p, 0,25 $ en 1080p ; version Lite = 0,027 $, 0,03 $ et 0,14 $ (son 1080p est un 720p agrandi).
 - Pour revenir à l'ancien coût : `XAI_VIDEO_RESOLUTION=480p`.
 
+## La vitesse du scénario (réglages facultatifs)
+
+Le scénario est écrit par l'IA, puis relu une 2e fois. La relecture ne renvoie que ses corrections (elle ne réécrit plus tout le scénario), et l'histoire s'affiche sur le site dès qu'elle est écrite, pendant la relecture.
+
+- `DIRECTOR_EFFORT` : effort de réflexion pour l'écriture (`minimal`, `low`, `medium`, `high`). Par défaut `low`.
+- `REVIEW_EFFORT` : effort de réflexion pour la relecture. Par défaut `low`.
+
+Le modèle utilisé, la durée et le nombre de jetons de chaque étape s'affichent dans la console du navigateur (lignes « [Drama Fruit] scénario écrit » et « scénario relu »).
+
+Le serveur retire aussi du scénario les personnages, lieux et objets qu'aucune scène n'utilise : chacun coûtait une image pour rien.
+
 ## Fichiers
 - `index.html` et `media/` : le site.
 - `api/` : le serveur, une fonction par fichier (config, login, me, library, director, review, image, clip, generate, job, check, media).
