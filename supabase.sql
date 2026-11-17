@@ -109,6 +109,29 @@ begin
   return coalesce(bal, 0);
 end $$;
 
+-- Compteurs d'usage (images et clips par épisode, appels à l'IA par jour) : le garde-fou contre les abus.
+create table if not exists public.usage (
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  key text not null,
+  n integer not null default 0,
+  updated_at timestamptz not null default now(),
+  primary key (user_id, key)
+);
+alter table public.usage enable row level security;
+
+-- Ajoute 1 au compteur et dit si on reste sous le plafond.
+create or replace function public.bump(p_id uuid, p_key text, p_max integer)
+returns boolean language plpgsql security definer set search_path = public as $$
+declare c integer;
+begin
+  insert into public.usage (user_id, key, n) values (p_id, p_key, 1)
+    on conflict (user_id, key) do update set n = public.usage.n + 1, updated_at = now()
+    returning n into c;
+  return c <= p_max;
+end $$;
+revoke all on function public.bump(uuid, text, integer) from public, anon, authenticated;
+grant execute on function public.bump(uuid, text, integer) to service_role;
+
 -- Ces fonctions ne sont appelables que par le serveur.
 revoke all on function public.ensure_profile(uuid, text, integer) from public, anon, authenticated;
 revoke all on function public.spend_once(uuid, text, integer, text) from public, anon, authenticated;
@@ -119,6 +142,8 @@ grant execute on function public.grant_once(uuid, text, integer, text) to servic
 
 -- Le dossier privé où sont gardées les vidéos montées.
 insert into storage.buckets (id, name, public) values ('videos', 'videos', false) on conflict (id) do nothing;
+-- Seulement des vidéos MP4, 200 Mo au plus par fichier.
+update storage.buckets set file_size_limit = 209715200, allowed_mime_types = array['video/mp4'] where id = 'videos';
 
 -- Pour te donner les crédits illimités d'administrateur, une fois ton compte créé sur le site :
 --   update public.profiles set admin = true where email = 'ton@email';

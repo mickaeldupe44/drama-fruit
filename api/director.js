@@ -1,5 +1,5 @@
 import { env, send, body } from '../lib/common.js';
-import { requireUser, profile, spend, sendFailure } from '../lib/account.js';
+import { requireUser, profile, spend, limit, sendFailure } from '../lib/account.js';
 import { METHOD, mission } from '../lib/method.js';
 import { cleanPack, packToPlan } from '../lib/pack.js';
 import { OFFER } from '../lib/offer.js';
@@ -18,6 +18,7 @@ export default async function handler(req, res) {
   if (!who.test) {
     try {
       const p = await profile(who); balance = p.credits;
+      await limit(who, p, `ia:${new Date().toISOString().slice(0, 10)}`, 120, 'Tu as beaucoup sollicité l\'IA aujourd\'hui. Reviens demain.');
       if (b.viral) { const left = await spend(who, p, `boost:${String(b.charge || Date.now()).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64)}`, OFFER.improveCredits || 0, 'Amélioration par l\'IA'); if (left !== null) balance = left; }
     } catch (e) { if (sendFailure(res, e)) return; console.error('director compte', e); return send(res, 502, { error: 'Le service de comptes ne répond pas, réessaie dans un instant.' }); }
   }

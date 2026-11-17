@@ -68,6 +68,25 @@ Ce que fait le mode payant :
 
 **Pas encore essayé avec les vrais services.** Tout est vérifié sur un banc local avec un faux Supabase et un faux Stripe. Avant d'ouvrir : faire un achat avec les clés de **test** de Stripe et vérifier que les crédits arrivent, que la vidéo montée se dépose bien (l'offre gratuite de Supabase limite la taille des fichiers) et que la connexion fonctionne.
 
+## Sécurité
+
+Ce que le serveur fait déjà :
+- les clés (xAI, OpenAI, Supabase « service », Stripe) ne sont que dans Vercel et ne sont jamais envoyées au site ;
+- les crédits ne bougent que côté serveur : un épisode se paie une fois, la différence est débitée si on demande ensuite plus que ce qui a été payé (plus de scènes, modèle plus cher, HD), et le nombre d'images et de clips par épisode est plafonné ;
+- un remboursement ne porte que sur un clip lancé et payé par le compte, au prix payé, une seule fois ;
+- écrire, relire et vérifier un scénario est gratuit mais plafonné par jour et par compte ;
+- les crédits achetés n'arrivent que par les notifications signées de Stripe, et une notification rejouée ne compte pas deux fois ;
+- un compte dont l'e-mail n'est pas confirmé n'a accès à rien ;
+- le relais `/api/media` ne sert que les vidéos de Grok (x.ai) et le stockage du site ;
+- un mauvais code d'accès (mode test) fait attendre une seconde ;
+- la base n'est accessible qu'au serveur (accès par ligne activé, aucune règle publique) ; le dossier de vidéos est privé.
+
+Ce qu'il te reste à régler toi-même :
+- **mode test** : choisis un code d'accès long (au moins 16 caractères au hasard) et ne le partage qu'avec des personnes de confiance, car il donne accès à tes crédits xAI et OpenAI ;
+- **Supabase → Authentication** : laisse « Confirm email » activé et active la protection CAPTCHA, sinon n'importe qui peut créer des comptes à la chaîne pour récupérer les crédits offerts ;
+- **Vercel** : règle `SITE_URL` sur l'adresse du site ;
+- **xAI et OpenAI** : fixe un plafond de dépense mensuel dans chaque tableau de bord. C'est le dernier filet si quelque chose échappe au reste.
+
 ## Fichiers
 - `index.html` et `media/` : le site.
 - `api/` : le serveur, une fonction par fichier (config, login, me, director, review, image, clip, generate, job, check, media, stripe). `me` sert aussi `/api/library`, `/api/characters`, `/api/checkout`, `/api/portal` et `/api/store`, grâce à la règle de `vercel.json`.

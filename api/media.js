@@ -14,7 +14,10 @@ export default async function handler(req, res) {
   const allowed = paid() ? Boolean(token && await userFromToken(String(token))) : okToken(token);
   if (!allowed) return send(res, 401, { error: 'Connecte-toi pour continuer.' });
   let u; try { u = new URL(String(req.query.u || '')); } catch { return send(res, 400, { error: 'Adresse invalide.' }); }
-  if (u.protocol !== 'https:' || privateHost(u.hostname)) return send(res, 400, { error: 'Adresse refusée.' });
+  // Le relais ne sert que les vidéos et images de Grok (x.ai) et le stockage du site : ce n'est pas un proxy ouvert.
+  let storage = ''; try { storage = env('SUPABASE_URL') ? new URL(env('SUPABASE_URL')).hostname : ''; } catch { storage = ''; }
+  const known = /(^|\.)x\.ai$/i.test(u.hostname) || (storage && u.hostname === storage);
+  if (u.protocol !== 'https:' || privateHost(u.hostname) || !known) return send(res, 400, { error: 'Adresse refusée.' });
   try {
     const up = await fetch(u, { headers: req.headers.range ? { Range: req.headers.range } : {} });
     const type = up.headers.get('content-type') || '';

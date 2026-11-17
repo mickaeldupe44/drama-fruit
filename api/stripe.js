@@ -1,6 +1,6 @@
 import { env, send } from '../lib/common.js';
 import { paid, select, update } from '../lib/store.js';
-import { refund as grant } from '../lib/account.js';
+import { grant } from '../lib/account.js';
 import { OFFER } from '../lib/offer.js';
 import { stripe, verifyWebhook } from '../lib/stripe.js';
 

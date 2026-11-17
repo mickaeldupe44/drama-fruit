@@ -1,5 +1,5 @@
 import { env, send, body, xaiModel, videoResolution } from '../lib/common.js';
-import { requireUser, charged } from '../lib/account.js';
+import { requireUser, charged, recordClip } from '../lib/account.js';
 import { clipPrompt } from '../lib/pack.js';
 import { submitVideo } from '../lib/xai.js';
 
@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   if (!key) return send(res, 500, { error: 'Clé XAI_API_KEY manquante sur le serveur.' });
   const b = body(req); const pack = b.pack || {}; const i = Number(b.index) || 0;
   // Mode payant : l'épisode se paie une seule fois, au premier appel de son tournage.
-  if (!(await charged(res, user, b)).ok) return;
+  const bill = await charged(res, user, b, b.redo ? null : 'clip'); if (!bill.ok) return;
   if (!pack.scenes || !pack.scenes[i]) return send(res, 400, { error: 'Scène inconnue.' });
   const model = xaiModel(b.model);
   const full = model === 'grok-imagine-video-1.5';
@@ -29,6 +29,7 @@ export default async function handler(req, res) {
   payload.prompt = clipPrompt(pack, i, refs.map((r, k) => `<IMAGE_${k + offset}> is ${r.label}`));
   try {
     const d = await submitVideo(payload);
+    await recordClip(user, d.requestId, bill.price);
     send(res, 200, { requestId: d.requestId, resolution: d.resolution });
   } catch (e) {
     if (e.status) return send(res, e.status === 429 ? 429 : 502, { error: `Grok a refusé la scène ${i + 1} : ${e.message}`, code: e.status === 429 ? 'rate_limited' : 'clip_failed' });

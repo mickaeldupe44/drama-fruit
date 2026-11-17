@@ -1,7 +1,7 @@
 import { env, send, decodeJob } from '../lib/common.js';
-import { requireUser, refund } from '../lib/account.js';
+import { requireUser, refundClips } from '../lib/account.js';
 
-import { OFFER, SCENE_SECONDS, scenePrice, episodePrice } from '../lib/offer.js';
+import { SCENE_SECONDS, episodePrice } from '../lib/offer.js';
 
 const FINAL_FAIL = new Set(['failed', 'expired']);
 
@@ -18,10 +18,8 @@ export default async function handler(req, res) {
       return d;
     }));
     const base = { id: req.query.id, model: job.m, duration: job.d, title: job.t, cost: user.test ? 0 : episodePrice({ model: job.m, scenes: Math.max(1, Math.round(job.d / SCENE_SECONDS)), hd: job.q === '1080p' }), hd: job.q === '1080p', resolution: job.q || null, stored: false, createdAt: new Date(job.c || Date.now()).toISOString() };
-    if (!user.test) {
-      const hd = job.q === '1080p'; const perClip = job.r.length && job.d / job.r.length === SCENE_SECONDS ? scenePrice({ model: job.m, hd }) : Math.ceil((OFFER.modelCredits[job.m] || 0) * (hd ? OFFER.hdMultiplier : 1) * (job.d / job.r.length));
-      await Promise.all(all.map((d, k) => (FINAL_FAIL.has(d.status) ? refund(user.id, `rembourse:${job.r[k]}`, perClip, 'Scène non livrée').catch((e) => console.error('remboursement', e)) : null)));
-    }
+    // Mode payant : une scène que Grok n'a pas livrée est remboursée, au prix noté quand elle a été lancée par ce compte.
+    if (!user.test) await refundClips(user, job.r.filter((id, k) => FINAL_FAIL.has(all[k].status))).catch((e) => console.error('remboursement', e));
     const failed = all.find((d) => FINAL_FAIL.has(d.status));
     if (failed) return send(res, 200, { ...base, status: 'failed', failureCode: String(failed.error || failed.status || '').toUpperCase(), refunded: true });
     const done = all.filter((d) => d.status === 'done' && d.video && d.video.url);

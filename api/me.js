@@ -45,6 +45,8 @@ async function library(req, res, user) {
   if (!id) throw bad(400, 'bad_request', 'Épisode sans identifiant.');
   const found = await select('episodes', { id: `eq.${id}`, select: 'id,user_id' });
   if (found[0] && found[0].user_id !== user.id) throw bad(403, 'forbidden', 'Cet épisode appartient à un autre compte.');
+  if (JSON.stringify(b.plan || null).length > 300000 || JSON.stringify(b.check || null).length > 60000) throw bad(413, 'too_large', 'Épisode trop volumineux pour être gardé.');
+  if (!found[0] && (await count('episodes', mine)) >= 500) throw bad(403, 'plan_limit', 'Ta vidéothèque est pleine : supprime d\'anciens épisodes.');
   const scenes = Array.isArray(b.segments) ? b.segments.length : 0;
   const row = {
     title: String(b.title || 'Épisode').slice(0, 200), job: String(b.job || '').slice(0, 4000) || null, model: String(b.model || '').slice(0, 60), duration: Number(b.duration) || scenes * 6,

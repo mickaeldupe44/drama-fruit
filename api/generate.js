@@ -1,5 +1,5 @@
 import { env, send, body, encodeJob, XAI_NATIVE_MAX, xaiModel, videoResolution } from '../lib/common.js';
-import { requireUser, charged } from '../lib/account.js';
+import { requireUser, charged, recordClip } from '../lib/account.js';
 import { submitVideo } from '../lib/xai.js';
 
 // Étape 3 : Grok tourne la vidéo. Les images du casting et du décor servent de références,
@@ -39,7 +39,7 @@ export default async function handler(req, res) {
   if (!key) return send(res, 500, { error: 'Clé XAI_API_KEY manquante sur le serveur.' });
   const b = body(req);
   // Mode payant : l'épisode se paie une seule fois, au premier appel de son tournage.
-  if (!(await charged(res, user, b)).ok) return;
+  const bill = await charged(res, user, b, 'clip'); if (!bill.ok) return;
   const plan = b.plan || {};
   const assets = b.assets || {};
   const duration = Math.max(4, Math.min(60, Number(b.duration) || 15));
@@ -77,6 +77,7 @@ export default async function handler(req, res) {
       payload.resolution = resolution || videoResolution({ refs: refMap.length > 0, hd: Boolean(b.hd) });
       const d = await submitVideo(payload);
       ids.push(d.requestId); resolution = resolution || d.resolution;
+      await recordClip(user, d.requestId, Math.round(bill.price * (Number(payload.duration) || 6) / 6));
     }
     const jobId = encodeJob({ r: ids, m: b.model || model, d: duration, t: String(plan.title || 'Épisode').slice(0, 80), c: Date.now(), q: resolution });
     send(res, 200, { jobId, cost: 0, balance: 9999 });

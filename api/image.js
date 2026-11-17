@@ -26,7 +26,7 @@ export default async function handler(req, res) {
   const user = await requireUser(req, res); if (!user) return;
   const b = body(req); const p = b.plan || {};
   // Mode payant : l'épisode se paie une seule fois, au premier appel de son tournage.
-  if (!(await charged(res, user, b)).ok) return;
+  if (!(await charged(res, user, b, 'img')).ok) return;
   const useOpenAI = Boolean(env('OPENAI_API_KEY'));
   if (!useOpenAI && !env('XAI_API_KEY')) return send(res, 500, { error: 'Aucune clé d\'image sur le serveur.' });
   const gen = (prompt, portrait) => (useOpenAI ? openaiGenerate(prompt, '1024x1536') : generateImage(prompt, portrait ? '2:3' : '9:16'));
