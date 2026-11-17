@@ -19,5 +19,7 @@ Ne colle jamais ces clés dans le chat ni dans un fichier : seulement dans Verce
 
 ## Fichiers
 - `index.html` et `media/` : le site.
-- `api/` : le serveur (config, login, me, director, generate, job, library).
-- `lib/common.js` : outils partagés.
+- `api/` : le serveur, une fonction par fichier (config, login, me, library, director, review, image, clip, generate, job, check, media).
+- `lib/` : le code partagé (`common.js` : outils).
+
+**Attention : 12 fichiers au maximum dans `api/`.** C'est la limite de l'offre gratuite de Vercel (Hobby). Avec un 13ᵉ fichier, Vercel refuse la mise en ligne et le site reste sur l'ancienne version sans prévenir. Pour ajouter une fonction, il faut en regrouper deux, ou ranger le code partagé dans `lib/`.
