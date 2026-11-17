@@ -1,5 +1,5 @@
 import { env, send, body, requireAuth } from '../lib/common.js';
-import { openaiGenerate, openaiEdit } from '../lib/openai.js';
+import { openaiGenerate, openaiEdit, SCENE_SIZES, sceneQuality } from '../lib/openai.js';
 import { generateImage, editImages } from '../lib/xai.js';
 import { sheetPrompt, lieuPrompt, objetPrompt, scenePrompt } from '../lib/pack.js';
 
@@ -30,7 +30,6 @@ export default async function handler(req, res) {
   try {
     let url;
     const pack = b.pack;
-    const edit = (urls, prompt, portrait) => (useOpenAI ? openaiEdit(urls, prompt, portrait === 'wide' ? '1536x1024' : '1024x1536') : editImages(urls, prompt, portrait === 'wide' ? '3:2' : '9:16'));
     if (pack && b.kind === 'sheet') {
       const pp = (pack.persos || [])[Number(b.index) || 0]; if (!pp) return send(res, 400, { error: 'Personnage inconnu.' });
       url = useOpenAI ? await openaiGenerate(sheetPrompt(pp), '1536x1024') : await generateImage(sheetPrompt(pp), '3:2');
@@ -44,7 +43,10 @@ export default async function handler(req, res) {
       const i = Number(b.index) || 0; if (!pack.scenes || !pack.scenes[i]) return send(res, 400, { error: 'Scène inconnue.' });
       const refs = (Array.isArray(b.refs) ? b.refs : []).filter((r) => r && typeof r.url === 'string').slice(0, 6);
       const labels = refs.map((r, k) => `image ${k + 1} = ${r.label}`);
-      url = refs.length ? await edit(refs.map((r) => r.url), scenePrompt(pack, i, labels)) : await gen(scenePrompt(pack, i, []), false);
+      // L'image que Grok va animer : en vraie 9:16 et en haute définition, c'est elle qui fixe la netteté du clip.
+      const sp = scenePrompt(pack, i, labels);
+      if (useOpenAI) url = refs.length ? await openaiEdit(refs.map((r) => r.url), sp, SCENE_SIZES, { quality: sceneQuality() }) : await openaiGenerate(sp, SCENE_SIZES, { quality: sceneQuality() });
+      else url = refs.length ? await editImages(refs.map((r) => r.url), sp, '9:16') : await generateImage(sp, '9:16');
     } else if (b.kind === 'char') {
       const c = (p.cast || [])[Number(b.index) || 0]; if (!c) return send(res, 400, { error: 'Personnage inconnu.' });
       url = await gen(charPrompt(c), true);
@@ -62,7 +64,7 @@ export default async function handler(req, res) {
       const first = (p.shots && p.shots[0]) || {};
       const desc = refs.map((r, i) => `image ${i + 1} is ${r.label}`).join(', ');
       const prompt = `${LOOK} ${BIBLE} Opening frame of a vertical 9:16 soap-opera episode. Use the reference images: ${desc}. Place the characters inside the set, keeping each character's exact design, hair, clothes, colors and forehead price badge. Scene: ${first.videoPrompt || first.visual || p.logline || ''} Dramatic, beautiful cinematic composition, characters clearly visible and acting, no text.`;
-      url = useOpenAI ? await openaiEdit(refs.map((r) => r.url), prompt, '1024x1536') : await editImages(refs.map((r) => r.url), prompt, '9:16');
+      url = useOpenAI ? await openaiEdit(refs.map((r) => r.url), prompt, SCENE_SIZES, { quality: sceneQuality() }) : await editImages(refs.map((r) => r.url), prompt, '9:16');
     } else return send(res, 400, { error: 'Type d\'image inconnu.' });
     send(res, 200, { url, provider: useOpenAI ? 'openai' : 'xai' });
   } catch (e) {

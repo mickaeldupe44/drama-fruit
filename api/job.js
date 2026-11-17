@@ -14,7 +14,7 @@ export default async function handler(req, res) {
       if (!r.ok) return { status: 'pending', error: (d.error && (d.error.message || d.error)) || `xAI ${r.status}` };
       return d;
     }));
-    const base = { id: req.query.id, model: job.m, duration: job.d, title: job.t, cost: 0, hd: false, stored: false, createdAt: new Date(job.c || Date.now()).toISOString() };
+    const base = { id: req.query.id, model: job.m, duration: job.d, title: job.t, cost: 0, hd: job.q === '1080p', resolution: job.q || null, stored: false, createdAt: new Date(job.c || Date.now()).toISOString() };
     const failed = all.find((d) => FINAL_FAIL.has(d.status));
     if (failed) return send(res, 200, { ...base, status: 'failed', failureCode: String(failed.error || failed.status || '').toUpperCase(), refunded: true });
     const done = all.filter((d) => d.status === 'done' && d.video && d.video.url);

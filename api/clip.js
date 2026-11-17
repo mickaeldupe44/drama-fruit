@@ -1,5 +1,6 @@
-import { env, send, body, requireAuth, xaiModel } from '../lib/common.js';
+import { env, send, body, requireAuth, xaiModel, videoResolution } from '../lib/common.js';
 import { clipPrompt } from '../lib/pack.js';
+import { submitVideo } from '../lib/xai.js';
 
 // Étape 3 : un clip Grok de 6 s pour UNE scène du PACK, à partir de son image de départ.
 const isImg = (u) => typeof u === 'string' && (/^https:\/\//.test(u) || u.startsWith('data:image/'));
@@ -18,16 +19,14 @@ export default async function handler(req, res) {
   const refs = full ? (Array.isArray(b.refs) ? b.refs : []).filter((r) => r && isImg(r.url)).slice(0, 6) : [];
   const offset = payload.image ? 1 : 0;
   if (refs.length) payload.reference_images = refs.map((r) => ({ url: r.url }));
+  // La netteté : sans « resolution », Grok tourne en 480p. Avec les feuilles de personnages, 720p est le maximum de xAI.
+  payload.resolution = videoResolution({ refs: refs.length > 0, hd: Boolean(b.hd) });
   payload.prompt = clipPrompt(pack, i, refs.map((r, k) => `<IMAGE_${k + offset}> is ${r.label}`));
   try {
-    const r = await fetch('https://api.x.ai/v1/videos/generations', { method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-    const d = await r.json().catch(() => ({}));
-    if (!r.ok || !d.request_id) {
-      const msg = (d.error && (d.error.message || d.error)) || d.message || `xAI ${r.status}`;
-      return send(res, r.status === 429 ? 429 : 502, { error: `Grok a refusé la scène ${i + 1} : ${msg}`, code: r.status === 429 ? 'rate_limited' : 'clip_failed' });
-    }
-    send(res, 200, { requestId: d.request_id });
+    const d = await submitVideo(payload);
+    send(res, 200, { requestId: d.requestId, resolution: d.resolution });
   } catch (e) {
+    if (e.status) return send(res, e.status === 429 ? 429 : 502, { error: `Grok a refusé la scène ${i + 1} : ${e.message}`, code: e.status === 429 ? 'rate_limited' : 'clip_failed' });
     console.error('clip', e);
     send(res, 502, { error: `Grok injoignable pour la scène ${i + 1}.` });
   }

@@ -1754,13 +1754,41 @@ footer a { color: var(--muted); }
 
   function seatAvatar(c) { return `<span style="font-size:19px">${FRUIT_EMOJI[(c.fruit || '').toLowerCase()] || '🍈'}</span>`; }
   function planSets(p) { return (Array.isArray(p.sets) && p.sets.length ? p.sets : [{ id: 's1', name: 'Décor', prompt: p.settingPrompt || p.setting || '' }]).slice(0, 4); }
-  function shrinkImage(url, maxSide) {
+  // Réduit une image (data URI) à maxSide pixels de côté au plus. « limit » = poids maximal de l'image, en caractères :
+  // une image qui tient déjà dans la taille et dans le poids voulus est gardée telle quelle (la recompresser l'abîmerait pour rien),
+  // sinon on baisse la qualité JPEG par paliers jusqu'à passer sous le poids voulu.
+  function shrinkImage(url, maxSide, quality, limit) {
     return new Promise((resolve) => {
       if (!url || !url.startsWith('data:')) { resolve(url); return; }
       const img = new Image();
-      img.onload = () => { try { const k = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight)); const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); resolve(c.toDataURL('image/jpeg', 0.82)); } catch { resolve(url); } };
+      img.onload = () => {
+        try {
+          const k = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+          if (limit && k === 1 && url.length <= limit) { resolve(url); return; }
+          const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+          let q = quality || 0.82; let out = c.toDataURL('image/jpeg', q);
+          while (limit && out.length > limit && q > 0.6) { q -= 0.08; out = c.toDataURL('image/jpeg', q); }
+          resolve(out);
+        } catch { resolve(url); }
+      };
       img.onerror = () => resolve(url); img.src = url;
     });
+  }
+  // Images de référence (feuilles de personnages, lieux, objets) : 1280 px suffisent et gardent les envois légers.
+  const refImage = (u) => (u ? shrinkImage(u, 1280, 0.86) : null);
+  // Image de départ d'une scène : c'est elle que Grok anime, elle fixe la netteté du clip. On la garde en pleine définition
+  // (jusqu'à 2048 px, non recompressée si elle pèse moins de 1,5 Mo environ).
+  const FRAME_LIMIT = 2000000;
+  const frameImage = (u) => (u ? shrinkImage(u, 2048, 0.92, FRAME_LIMIT) : null);
+  // Envoi d'une scène à Grok. Filet de sécurité : si la scène est refusée alors que son image de départ est lourde (image en
+  // pleine définition), on réessaie une fois avec l'image allégée d'avant (1024 px), pour ne jamais faire moins bien qu'avant.
+  async function sendClip(b) {
+    try { return await apiRetry('/api/clip', b); }
+    catch (e) {
+      const heavy = typeof b.image === 'string' && b.image.startsWith('data:') && b.image.length > 400000;
+      if (!heavy || e.code === 'unauthorized' || e.code === 'rate_limited' || !(e.code === 'clip_failed' || /\(413\)|too large|payload/i.test(String(e.message)))) throw e;
+      return apiRetry('/api/clip', Object.assign({}, b, { image: await shrinkImage(b.image, 1024, 0.85) }));
+    }
   }
   async function makeAssets() {
     const p = state.plan; const cast = p.cast.slice(0, 4); const sets = planSets(p);
@@ -1783,7 +1811,7 @@ footer a { color: var(--muted); }
     const firstSet = (p.shots && p.shots[0] && a.sets.find((x) => x.id === p.shots[0].set)) || a.sets[0];
     const refs = (firstSet ? [{ url: firstSet.url, label: `the "${firstSet.name}" set` }] : []).concat(a.characters.map((c) => ({ url: c.url, label: `${c.name}, a ${c.fruit}` }))).slice(0, 5);
     const backs = Promise.all(a.characters.map((c) => call({ kind: 'back', index: cast.findIndex((x) => x.name === c.name), refs: [{ url: c.url, label: c.name }] }).then(small).then((u) => { if (u) { c.back = u; renderAssets(); } })));
-    const key = call({ kind: 'key', refs }).then(small).then((u) => { if (u) { a.keyframe = u; renderAssets(); } });
+    const key = call({ kind: 'key', refs }).then((u) => (u ? shrinkImage(u, 1536, 0.9, 900000) : null)).then((u) => { if (u) { a.keyframe = u; renderAssets(); } });
     await Promise.all([backs, key]);
   }
   function renderAssets() {
@@ -1920,7 +1948,7 @@ footer a { color: var(--muted); }
     state.packAssets = A;
     const head = $('#assetBox .asset-head b'); if (head) head.textContent = `🎨 Feuilles, décors et scènes créés par ${who}`;
     $('#assetNote').textContent = 'en cours…'; renderPackAssets();
-    const small = (u) => (u ? shrinkImage(u, 1024) : null);
+    const small = refImage;
     const nImg = pk.persos.length + pk.lieux.length + pk.objets.length + pk.scenes.length; let done = 0;
     const tick = (label) => { done += 1; showProgress(done / nImg, `${label} ${done}/${nImg}`); };
     setStage(2); showProgress(0, `${who} dessine les personnages (face et dos), les lieux et les objets…`, true);
@@ -1938,7 +1966,7 @@ footer a { color: var(--muted); }
       const refs = sc.presents.filter((id) => id !== entering && A.sheets[id]).slice(0, 3).map((id) => ({ url: A.sheets[id], label: `la feuille de personnage de ${fr(id).fruit_court || fr(id).fruit} (face et dos)` }));
       if (sc.lieu && A.lieux[sc.lieu]) refs.push({ url: A.lieux[sc.lieu], label: `le décor de référence « ${(pk.lieux.find((l) => l.id === sc.lieu) || {}).nom || sc.lieu} »` });
       (sc.objets || []).slice(0, 2).forEach((o) => { if (A.objets[o]) refs.push({ url: A.objets[o], label: `l'objet « ${(pk.objets.find((x) => x.id === o) || {}).nom || o} »` }); });
-      try { const d = await apiRetry('/api/image', { pack: pk, kind: 'scene', index: i, refs }); A.scenes[i] = await small(d.url); } catch (e) { if (e.code === 'unauthorized') throw e; }
+      try { const d = await apiRetry('/api/image', { pack: pk, kind: 'scene', index: i, refs }); A.scenes[i] = await frameImage(d.url); } catch (e) { if (e.code === 'unauthorized') throw e; }
       tick('Images des scènes'); renderPackAssets();
     });
     $('#assetNote').textContent = 'Grok anime chaque scène à partir de ces images.';
@@ -1949,16 +1977,17 @@ footer a { color: var(--muted); }
     const ids = await pool(pk.scenes.map((sc, i) => i), 3, async (i) => {
       const sc = pk.scenes[i];
       const refs = sc.presents.filter((id) => A.sheets[id]).slice(0, 4).map((id) => ({ url: A.sheets[id], label: `the character sheet (front and back views) of the ${fr(id).court_en || fr(id).fruit}` }));
-      const d = await apiRetry('/api/clip', { pack: pk, index: i, image: A.scenes[i] || null, refs, model: state.model });
+      const d = await sendClip({ pack: pk, index: i, image: A.scenes[i] || null, refs, model: state.model, hd: state.hd });
       sent += 1; showProgress(sent / pk.scenes.length, `Scènes envoyées à Grok : ${sent}/${pk.scenes.length}`);
+      if (d.resolution) A.resolution = d.resolution;
       return d.requestId;
     });
-    const jobId = btoa(unescape(encodeURIComponent(JSON.stringify({ r: ids, m: state.model, d: pk.scenes.length * 6, t: state.plan.title, c: Date.now() })))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const jobId = btoa(unescape(encodeURIComponent(JSON.stringify({ r: ids, m: state.model, d: pk.scenes.length * 6, t: state.plan.title, c: Date.now(), q: A.resolution || undefined })))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     $('#resultBox').hidden = false; $('#screenIdle').hidden = false; $('#screenText').textContent = `Tournage des ${pk.scenes.length} scènes en cours…`;
     const old = $('#screen video'); if (old) old.remove();
     state.job = { id: jobId, startedAt: Date.now(), cost: cost(state.model, pk.scenes.length * 6, state.hd) };
     $('#runStatus').textContent = `Tournage lancé : ${pk.scenes.length} scènes de 6 s. Compte 2 à 5 minutes.`;
-    $('#resultMeta').innerHTML = `<b>${esc(state.plan.title)}</b><br>${esc(MODEL_LABELS[state.model].name)} · ${pk.scenes.length * 6} s · ${pk.scenes.length} scènes`;
+    $('#resultMeta').innerHTML = `<b>${esc(state.plan.title)}</b><br>${esc(MODEL_LABELS[state.model].name)} · ${pk.scenes.length * 6} s · ${pk.scenes.length} scènes${A.resolution ? ` · ${esc(A.resolution)}` : ''}`;
     $('#captionBox').textContent = `${state.plan.caption || ''}\n${(state.plan.hashtags || []).join(' ')}`.trim();
     pollJob();
   }
@@ -2036,7 +2065,7 @@ footer a { color: var(--muted); }
       if (j.montageUrl) { v.src = j.montageUrl; $('#btnOpen').href = j.montageUrl; $('#btnOpen').textContent = '⬇ Télécharger l\'épisode monté'; $('#btnOpen').setAttribute('download', `${(j.title || 'episode').toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'episode'}.mp4`); }
       else $('#btnOpen').removeAttribute('download');
       if (many && !j.montageUrl) { let k = 0; v.addEventListener('ended', () => { k = (k + 1) % j.segments.length; v.src = j.segments[k]; if (k) v.play().catch(() => {}); }); } }
-    $('#resultMeta').innerHTML = `<b>${esc(j.title || state.plan.title)}</b><br>${esc(MODEL_LABELS[j.model] ? MODEL_LABELS[j.model].name : j.model)} · ${j.duration} s${j.hd ? ' · HD' : ''} · ${j.cost} crédits`;
+    $('#resultMeta').innerHTML = `<b>${esc(j.title || state.plan.title)}</b><br>${esc(MODEL_LABELS[j.model] ? MODEL_LABELS[j.model].name : j.model)} · ${j.duration} s${j.resolution ? ` · ${esc(j.resolution)}` : (j.hd ? ' · HD' : '')} · ${j.cost} crédits`;
     const p = j.plan || state.plan;
     $('#captionBox').textContent = `${p.caption || ''}\n${(p.hashtags || []).join(' ')}`.trim();
     $('#expiryNote').hidden = j.stored;
@@ -2126,10 +2155,10 @@ footer a { color: var(--muted); }
     reader.onload = () => {
       const img = new Image();
       img.onload = () => {
-        const max = 1024; const scale = Math.min(1, max / Math.max(img.width, img.height));
+        const max = 1920; const scale = Math.min(1, max / Math.max(img.width, img.height));
         const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
         const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(img, 0, 0, w, h);
-        cb(c.toDataURL('image/jpeg', 0.85));
+        cb(c.toDataURL('image/jpeg', 0.9));
       };
       img.onerror = () => toast('Image illisible.');
       img.src = reader.result;
@@ -2224,7 +2253,7 @@ footer a { color: var(--muted); }
       const A = state.packAssets && state.packAssets.title === pk.titre ? state.packAssets : { sheets: {}, scenes: [] };
       const fr = (id) => (pk.persos.find((x) => x.id === id) || {});
       const refs = pk.scenes[i].presents.filter((id) => A.sheets[id]).slice(0, 4).map((id) => ({ url: A.sheets[id], label: `the character sheet (front and back views) of the ${fr(id).court_en || fr(id).fruit}` }));
-      const d = await apiRetry('/api/clip', { pack: pk, index: i, image: (A.scenes || [])[i] || null, refs, model: j.model || state.model });
+      const d = await sendClip({ pack: pk, index: i, image: (A.scenes || [])[i] || null, refs, model: j.model || state.model, hd: state.hd });
       const jid = b64urlEncode({ r: [d.requestId], m: j.model, d: 6, t: j.title, c: Date.now() });
       let url = null;
       for (let k = 0; k < 120 && !url; k++) {
@@ -2366,7 +2395,7 @@ footer a { color: var(--muted); }
         setProg(prog(n, 'Réencodage des scènes'));
         const inputs = files.flatMap((f) => ['-i', f]);
         const filter = files.map((f, i) => `[${i}:v:0]scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=24[v${i}];[${i}:a:0]aresample=44100[a${i}]`).join(';') + ';' + files.map((f, i) => `[v${i}][a${i}]`).join('') + `concat=n=${n}:v=1:a=1[v][a]`;
-        code = await ff.exec([...inputs, '-filter_complex', filter, '-map', '[v]', '-map', '[a]', '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '22', '-c:a', 'aac', 'joined.mp4']);
+        code = await ff.exec([...inputs, '-filter_complex', filter, '-map', '[v]', '-map', '[a]', '-c:v', 'libx264', '-preset', 'superfast', '-crf', '18', '-pix_fmt', 'yuv420p', '-c:a', 'aac', 'joined.mp4']);
         data = code === 0 ? await ff.readFile('joined.mp4') : null;
       }
       if (!data || data.length < 1000) throw new Error('Le collage des scènes a échoué.');
@@ -2411,7 +2440,7 @@ footer a { color: var(--muted); }
         const fa = [...args];
         if (parts.length) fa.push('-filter_complex', parts.join(';'));
         fa.push('-map', vLabel === '0:v:0' ? '0:v:0' : `[${vLabel}]`); if (aLabel) fa.push('-map', aLabel === '0:a:0' ? '0:a:0' : `[${aLabel}]`);
-        fa.push(...(cues.length ? ['-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '21', '-pix_fmt', 'yuv420p'] : ['-c:v', 'copy']), ...(aLabel ? ['-c:a', 'aac', '-b:a', '160k'] : ['-an']), '-t', T.toFixed(2), '-movflags', '+faststart', 'final.mp4');
+        fa.push(...(cues.length ? ['-c:v', 'libx264', '-preset', 'superfast', '-crf', '18', '-pix_fmt', 'yuv420p'] : ['-c:v', 'copy']), ...(aLabel ? ['-c:a', 'aac', '-b:a', '160k'] : ['-an']), '-t', T.toFixed(2), '-movflags', '+faststart', 'final.mp4');
         setProg(prog(n + 1, cues.length ? 'Incrustation des sous-titres' : 'Ajout de la musique'));
         code = await ff.exec(fa);
         const fin = code === 0 ? await ff.readFile('final.mp4').catch(() => null) : null;
@@ -2738,7 +2767,7 @@ footer a { color: var(--muted); }
 
   /* ---------- Divers ---------- */
   // Nouvelle version du site en ligne : on propose de recharger la page.
-  const BUILD = '20261115090903';
+  const BUILD = '20261117135006';
   let updateShown = false;
   async function checkUpdate() {
     if (updateShown || BUILD.startsWith('__') || !/^https?:/.test(location.protocol)) return;

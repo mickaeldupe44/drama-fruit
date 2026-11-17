@@ -1,8 +1,9 @@
-import { env, send, body, requireAuth, encodeJob, XAI_NATIVE_MAX, xaiModel } from '../lib/common.js';
+import { env, send, body, requireAuth, encodeJob, XAI_NATIVE_MAX, xaiModel, videoResolution } from '../lib/common.js';
+import { submitVideo } from '../lib/xai.js';
 
 // Étape 3 : Grok tourne la vidéo. Les images du casting et du décor servent de références,
 // et la première image (tout le monde en place) sert de point de départ.
-const STYLE = 'Vertical 9:16 video. Ultra-detailed 3D animated soap-opera drama. The characters are anthropomorphic fruits with human bodies: glossy realistic fruit heads with very expressive cartoon faces and human hair, human bodies in real clothes, a glowing golden price badge on the forehead. Cinematic lighting, dramatic camera moves and close-ups, exaggerated emotions, lip-synced dialogue with natural expressive voices.';
+const STYLE = 'Vertical 9:16 video. Ultra-detailed 3D animated soap-opera drama. The characters are anthropomorphic fruits with human bodies: glossy realistic fruit heads with very expressive cartoon faces and human hair, human bodies in real clothes, a glowing golden price badge on the forehead. Cinematic lighting, dramatic camera moves and close-ups, exaggerated emotions, lip-synced dialogue with natural expressive voices. Razor-sharp focus on the faces, crisp edges and fine detailed textures in every frame; no blur, no flicker, no morphing: every character stays exactly on model from the first to the last frame.';
 
 function segmentsOf(plan, duration) {
   const n = Math.max(1, Math.ceil(duration / XAI_NATIVE_MAX));
@@ -54,7 +55,7 @@ export default async function handler(req, res) {
   };
   const segs = segmentsOf(plan, duration);
   try {
-    const ids = [];
+    const ids = []; let resolution = null;
     for (const seg of segs) {
       const payload = { model, duration: seg.seconds, aspect_ratio: '9:16' };
       const pinned = seg.index === 0 ? firstFrame : (!full ? firstFrame : null);
@@ -68,14 +69,12 @@ export default async function handler(req, res) {
         refMap = used.map((r, i) => ({ ...r, tag: `<IMAGE_${i + offset}>` }));
       }
       payload.prompt = promptFor(plan, seg, b.lang, refMap);
-      const r = await fetch('https://api.x.ai/v1/videos/generations', {
-        method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
-      });
-      const d = await r.json().catch(() => ({}));
-      if (!r.ok || !d.request_id) throw new Error((d.error && (d.error.message || d.error)) || d.message || `xAI ${r.status}`);
-      ids.push(d.request_id);
+      // La netteté : sans « resolution », Grok tourne en 480p. Avec des images de référence, 720p est le maximum de xAI.
+      payload.resolution = videoResolution({ refs: refMap.length > 0, hd: Boolean(b.hd) });
+      const d = await submitVideo(payload);
+      ids.push(d.requestId); resolution = resolution || d.resolution;
     }
-    const jobId = encodeJob({ r: ids, m: b.model || model, d: duration, t: String(plan.title || 'Épisode').slice(0, 80), c: Date.now() });
+    const jobId = encodeJob({ r: ids, m: b.model || model, d: duration, t: String(plan.title || 'Épisode').slice(0, 80), c: Date.now(), q: resolution });
     send(res, 200, { jobId, cost: 0, balance: 9999 });
   } catch (e) {
     console.error('generate', e);
