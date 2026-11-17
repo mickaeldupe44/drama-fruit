@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { Readable } from 'node:stream';
 import { env, send, tokenFor } from '../lib/common.js';
+import { paid, userFromToken } from '../lib/store.js';
 
 // Relais des vidéos/images Grok sur notre propre domaine, pour que la couverture TikTok puisse lire l'image.
 const okToken = (t) => { const code = env('ACCESS_CODE'); if (!code || typeof t !== 'string') return false; const g = tokenFor(code); return t.length === g.length && crypto.timingSafeEqual(Buffer.from(t), Buffer.from(g)); };
@@ -8,7 +9,10 @@ const privateHost = (h) => /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3
 
 export default async function handler(req, res) {
   const h = String(req.headers.authorization || '');
-  if (!okToken(h.startsWith('Bearer ') ? h.slice(7) : req.query.t)) return send(res, 401, { error: 'Connecte-toi pour continuer.' });
+  const token = h.startsWith('Bearer ') ? h.slice(7) : req.query.t;
+  // Mode payant : le jeton de connexion du site ; mode test : le jeton du code d'accès.
+  const allowed = paid() ? Boolean(token && await userFromToken(String(token))) : okToken(token);
+  if (!allowed) return send(res, 401, { error: 'Connecte-toi pour continuer.' });
   let u; try { u = new URL(String(req.query.u || '')); } catch { return send(res, 400, { error: 'Adresse invalide.' }); }
   if (u.protocol !== 'https:' || privateHost(u.hostname)) return send(res, 400, { error: 'Adresse refusée.' });
   try {

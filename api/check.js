@@ -1,4 +1,5 @@
-import { send, body, requireAuth, env } from '../lib/common.js';
+import { send, body, env } from '../lib/common.js';
+import { requireUser } from '../lib/account.js';
 import { textLlm, chatJson } from '../lib/llm.js';
 
 // Vérification de cohérence : l'IA regarde 2 images de chaque scène tournée et les compare au PACK.
@@ -22,7 +23,7 @@ function sceneSpec(pack, sc) {
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return send(res, 405, { error: 'POST attendu.' });
-  if (!requireAuth(req, res)) return;
+  const user = await requireUser(req, res); if (!user) return;
   const llm = textLlm(); if (!llm) return send(res, 500, { error: 'Aucune IA disponible pour la vérification.' });
   if (llm.name === 'Grok' && env('XAI_VISION_MODEL')) llm.models = [env('XAI_VISION_MODEL')];
   const b = body(req); const pack = b.pack || {}; const frames = Array.isArray(b.frames) ? b.frames : [];

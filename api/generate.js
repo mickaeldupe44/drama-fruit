@@ -1,4 +1,5 @@
-import { env, send, body, requireAuth, encodeJob, XAI_NATIVE_MAX, xaiModel, videoResolution } from '../lib/common.js';
+import { env, send, body, encodeJob, XAI_NATIVE_MAX, xaiModel, videoResolution } from '../lib/common.js';
+import { requireUser, charged } from '../lib/account.js';
 import { submitVideo } from '../lib/xai.js';
 
 // Étape 3 : Grok tourne la vidéo. Les images du casting et du décor servent de références,
@@ -33,10 +34,12 @@ function promptFor(plan, seg, lang, refMap) {
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return send(res, 405, { error: 'POST attendu.' });
-  if (!requireAuth(req, res)) return;
+  const user = await requireUser(req, res); if (!user) return;
   const key = env('XAI_API_KEY');
   if (!key) return send(res, 500, { error: 'Clé XAI_API_KEY manquante sur le serveur.' });
   const b = body(req);
+  // Mode payant : l'épisode se paie une seule fois, au premier appel de son tournage.
+  if (!(await charged(res, user, b)).ok) return;
   const plan = b.plan || {};
   const assets = b.assets || {};
   const duration = Math.max(4, Math.min(60, Number(b.duration) || 15));

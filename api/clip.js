@@ -1,4 +1,5 @@
-import { env, send, body, requireAuth, xaiModel, videoResolution } from '../lib/common.js';
+import { env, send, body, xaiModel, videoResolution } from '../lib/common.js';
+import { requireUser, charged } from '../lib/account.js';
 import { clipPrompt } from '../lib/pack.js';
 import { submitVideo } from '../lib/xai.js';
 
@@ -7,10 +8,12 @@ const isImg = (u) => typeof u === 'string' && (/^https:\/\//.test(u) || u.starts
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return send(res, 405, { error: 'POST attendu.' });
-  if (!requireAuth(req, res)) return;
+  const user = await requireUser(req, res); if (!user) return;
   const key = env('XAI_API_KEY');
   if (!key) return send(res, 500, { error: 'Clé XAI_API_KEY manquante sur le serveur.' });
   const b = body(req); const pack = b.pack || {}; const i = Number(b.index) || 0;
+  // Mode payant : l'épisode se paie une seule fois, au premier appel de son tournage.
+  if (!(await charged(res, user, b)).ok) return;
   if (!pack.scenes || !pack.scenes[i]) return send(res, 400, { error: 'Scène inconnue.' });
   const model = xaiModel(b.model);
   const full = model === 'grok-imagine-video-1.5';

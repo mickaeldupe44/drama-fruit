@@ -1,9 +1,12 @@
-import { env, send, requireAuth, decodeJob } from '../lib/common.js';
+import { env, send, decodeJob } from '../lib/common.js';
+import { requireUser, refund } from '../lib/account.js';
+
+import { OFFER, SCENE_SECONDS, scenePrice, episodePrice } from '../lib/offer.js';
 
 const FINAL_FAIL = new Set(['failed', 'expired']);
 
 export default async function handler(req, res) {
-  if (!requireAuth(req, res)) return;
+  const user = await requireUser(req, res); if (!user) return;
   const job = decodeJob(req.query.id);
   if (!job || !Array.isArray(job.r) || !job.r.length) return send(res, 404, { error: 'Tâche inconnue.' });
   const key = env('XAI_API_KEY');
@@ -14,7 +17,11 @@ export default async function handler(req, res) {
       if (!r.ok) return { status: 'pending', error: (d.error && (d.error.message || d.error)) || `xAI ${r.status}` };
       return d;
     }));
-    const base = { id: req.query.id, model: job.m, duration: job.d, title: job.t, cost: 0, hd: job.q === '1080p', resolution: job.q || null, stored: false, createdAt: new Date(job.c || Date.now()).toISOString() };
+    const base = { id: req.query.id, model: job.m, duration: job.d, title: job.t, cost: user.test ? 0 : episodePrice({ model: job.m, scenes: Math.max(1, Math.round(job.d / SCENE_SECONDS)), hd: job.q === '1080p' }), hd: job.q === '1080p', resolution: job.q || null, stored: false, createdAt: new Date(job.c || Date.now()).toISOString() };
+    if (!user.test) {
+      const hd = job.q === '1080p'; const perClip = job.r.length && job.d / job.r.length === SCENE_SECONDS ? scenePrice({ model: job.m, hd }) : Math.ceil((OFFER.modelCredits[job.m] || 0) * (hd ? OFFER.hdMultiplier : 1) * (job.d / job.r.length));
+      await Promise.all(all.map((d, k) => (FINAL_FAIL.has(d.status) ? refund(user.id, `rembourse:${job.r[k]}`, perClip, 'Scène non livrée').catch((e) => console.error('remboursement', e)) : null)));
+    }
     const failed = all.find((d) => FINAL_FAIL.has(d.status));
     if (failed) return send(res, 200, { ...base, status: 'failed', failureCode: String(failed.error || failed.status || '').toUpperCase(), refunded: true });
     const done = all.filter((d) => d.status === 'done' && d.video && d.video.url);

@@ -1,4 +1,5 @@
-import { env, send, body, requireAuth } from '../lib/common.js';
+import { env, send, body } from '../lib/common.js';
+import { requireUser } from '../lib/account.js';
 import { METHOD, reviewMission } from '../lib/method.js';
 import { cleanPack, packToPlan, auditPack, mergeReview } from '../lib/pack.js';
 import { textLlm, chatJson } from '../lib/llm.js';
@@ -6,7 +7,7 @@ import { textLlm, chatJson } from '../lib/llm.js';
 // 2e passe : l'IA relit le PACK et corrige ce qui ne respecte pas la méthode.
 export default async function handler(req, res) {
   if (req.method !== 'POST') return send(res, 405, { error: 'POST attendu.' });
-  if (!requireAuth(req, res)) return;
+  const user = await requireUser(req, res); if (!user) return;
   const llm = textLlm(); if (!llm) return send(res, 200, { skipped: true });
   const b = body(req); const pack = b.pack;
   if (!pack || !Array.isArray(pack.scenes)) return send(res, 400, { error: 'PACK manquant.' });

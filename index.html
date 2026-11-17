@@ -1592,11 +1592,19 @@ p .cost { display: inline; color: #ffd36b; font-weight: 700; }
   }
 
   /* ---------- API du site ---------- */
+  // Identifiant de l'épisode en cours de tournage. Il reste le même si on relance après une panne (pas de double débit)
+  // et change dès qu'un épisode est terminé ou qu'un nouveau scénario est écrit.
+  const newId = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`);
+  function episodeId() { if (!state.plan) return state.episode || (state.episode = newId()); return state.plan.episode || (state.plan.episode = newId()); }
+  const paidMode = () => Boolean(state.cfg && !state.cfg.testMode && !state.demo);
   async function api(path, opts) {
     const o = Object.assign({ headers: {} }, opts || {});
     o.headers.Accept = 'application/json';
     const t = await auth.token();
     if (t) o.headers.Authorization = `Bearer ${t}`;
+    if (o.body && typeof o.body !== 'string' && /^\/api\/(image|clip|generate)$/.test(path)) {
+      o.body = Object.assign({ episode: episodeId(), model: state.model, hd: state.hd, duration: state.duration }, o.body);
+    }
     if (o.body && typeof o.body !== 'string') { o.body = JSON.stringify(o.body); o.headers['Content-Type'] = 'application/json'; }
     const r = await fetch(path, o);
     const data = await r.json().catch(() => null);
@@ -2114,7 +2122,7 @@ p .cost { display: inline; color: #ffd36b; font-weight: 700; }
       chargeImproveLocally();
       return viralize(extra.previousPlan && !extra.previousPlan.viral ? extra.previousPlan : base, extra.feedback);
     }
-    const d = await api('/api/director', { method: 'POST', body: directorBody(extra) });
+    const d = await api('/api/director', { method: 'POST', body: Object.assign(directorBody(extra), viral ? { charge: newId() } : {}) });
     if (state.me && !state.me.admin && typeof d.balance === 'number') { state.me.credits = d.balance; renderNav(); renderCost(); }
     if (d.fallback) return viral ? viralize(localDirector(extra), extra.feedback) : localDirector(extra);
     let plan = d.plan && d.plan.outro !== undefined ? d.plan : attachOutro(d.plan);
@@ -2219,7 +2227,7 @@ p .cost { display: inline; color: #ffd36b; font-weight: 700; }
       return d.requestId;
     });
     A.resolution = ['480p', '720p', '1080p'].find((r) => got.includes(r)) || null;
-    const jobId = btoa(unescape(encodeURIComponent(JSON.stringify({ r: ids, m: state.model, d: pk.scenes.length * 6, t: state.plan.title, c: Date.now(), q: A.resolution || undefined })))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const jobId = btoa(unescape(encodeURIComponent(JSON.stringify({ r: ids, m: state.model, d: pk.scenes.length * 6, t: state.plan.title, c: Date.now(), q: A.resolution || undefined, e: episodeId() })))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     $('#resultBox').hidden = false; $('#screenIdle').hidden = false; $('#screenText').textContent = `Tournage des ${pk.scenes.length} scènes en cours…`; showScreen(true);
     const old = $('#screen video'); if (old) old.remove();
     state.job = { id: jobId, startedAt: Date.now(), cost: cost(state.model, pk.scenes.length * 6, state.hd) };
@@ -2364,7 +2372,26 @@ p .cost { display: inline; color: #ffd36b; font-weight: 700; }
   }
   // Mode test : pas de base de données, on garde les épisodes terminés dans ce navigateur.
   function localEpisodes() { try { return JSON.parse(localStorage.getItem('df_episodes') || '[]'); } catch { return []; } }
+  // Dépose la vidéo montée sur le compte. Un échec ne gêne pas : la vidéo reste téléchargeable dans la page.
+  async function keepMontage(j, blob) {
+    const episode = j.episode || (b64urlDecode(j.id) || {}).e;
+    if (!paidMode() || !episode || !(perks() && perks().library)) return;
+    try {
+      const d = await api('/api/store', { method: 'POST', body: { episode } });
+      const r = await fetch(d.url, { method: 'PUT', headers: { 'Content-Type': 'video/mp4', 'x-upsert': 'true' }, body: blob });
+      if (!r.ok) throw new Error(`dépôt refusé (${r.status})`);
+      await api('/api/library', { method: 'POST', body: { episode, job: j.id, title: j.title, model: j.model, duration: j.duration, resolution: resOf(j), segments: j.segments, plan: j.plan || null, check: j.check && !j.check.error ? j.check : null, stored: true } });
+      toast('Vidéo gardée dans ta vidéothèque.');
+    } catch (e) { console.warn('[Drama Fruit] vidéo non gardée', e && e.message); }
+  }
   function saveLocalEpisode(j) {
+    if (j && j.id && j.status === 'done' && paidMode() && !j.saved) {
+      j.saved = true; j.episode = (b64urlDecode(j.id) || {}).e || (state.plan && state.plan.episode) || null;
+      if (state.plan && state.plan.episode === j.episode) state.plan.episode = null;
+      if (j.episode) api('/api/library', { method: 'POST', body: { episode: j.episode, job: j.id, title: j.title, model: j.model, duration: j.duration, resolution: resOf(j), segments: j.segments, plan: j.plan || state.plan || null, check: j.check && !j.check.error ? j.check : null } }).catch(() => { j.saved = false; });
+      loadMe().then(renderNav).catch(() => {});
+      return;
+    }
     if (!j || !j.id || j.status !== 'done' || !(state.cfg && state.cfg.testMode)) return;
     const it = { id: j.id, status: 'done', title: j.title, model: j.model, duration: j.duration, cost: j.cost || 0, createdAt: j.createdAt || new Date().toISOString(), outputUrl: j.outputUrl, segments: j.segments, plan: j.plan || state.plan || null, check: j.check && !j.check.error ? j.check : null, local: true };
     let list = localEpisodes().filter((x) => x.id !== it.id); list.unshift(it); list = list.slice(0, 20);
@@ -2503,7 +2530,8 @@ p .cost { display: inline; color: #ffd36b; font-weight: 700; }
       const fr = (id) => (pk.persos.find((x) => x.id === id) || {});
       const refs = pk.scenes[i].presents.filter((id) => A.sheets[id]).slice(0, 4).map((id) => ({ url: A.sheets[id], label: `the character sheet (front and back views) of the ${fr(id).court_en || fr(id).fruit}` }));
       const q = resOf(j);
-      const d = await sendClip({ pack: pk, index: i, image: (A.scenes || [])[i] || null, refs, model: j.model || state.model, hd: q ? q === '1080p' : state.hd });
+      const d = await sendClip({ pack: pk, index: i, image: (A.scenes || [])[i] || null, refs, model: j.model || state.model, hd: q ? q === '1080p' : state.hd, episode: (b64urlDecode(j.id) || {}).e || episodeId(), redo: newId() });
+      if (paidMode()) loadMe().then(renderNav).catch(() => {});
       const jid = b64urlEncode({ r: [d.requestId], m: j.model, d: 6, t: j.title, c: Date.now() });
       let url = null;
       for (let k = 0; k < 120 && !url; k++) {
@@ -2707,10 +2735,12 @@ p .cost { display: inline; color: #ffd36b; font-weight: 700; }
       for (const f of files) await ff.deleteFile(f).catch(() => {});
       await ff.deleteFile('joined.mp4').catch(() => {});
       if (j.montageUrl) URL.revokeObjectURL(j.montageUrl);
-      j.montageUrl = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
+      const montage = new Blob([data.buffer], { type: 'video/mp4' });
+      j.montageUrl = URL.createObjectURL(montage);
       $('#montageOpts').hidden = true;
       finish(j);
       toast('Épisode monté : une seule vidéo, sans coupure.');
+      keepMontage(j, montage);
     } catch (e) {
       hideProgress(); info($('#montageInfo'), `Montage impossible : ${e.message || e}`);
     } finally { state.busy = false; $('#btnMontage').disabled = false; $('#btnMontageGo').disabled = false; }
@@ -2728,7 +2758,8 @@ p .cost { display: inline; color: #ffd36b; font-weight: 700; }
   async function mediaUrl(u) {
     if (!u || !/^https?:/i.test(u)) return u;
     try { if (new URL(u).origin === location.origin) return u; } catch { return u; }
-    if (!(state.cfg && state.cfg.testMode)) return u;
+    if (!state.cfg || state.demo) return u;
+    if (state.cfg.supabaseUrl && u.startsWith(state.cfg.supabaseUrl)) return u;
     const t = await auth.token().catch(() => null);
     return t ? `/api/media?u=${encodeURIComponent(u)}&t=${encodeURIComponent(t)}` : u;
   }
@@ -3040,7 +3071,7 @@ p .cost { display: inline; color: #ffd36b; font-weight: 700; }
 
   /* ---------- Divers ---------- */
   // Nouvelle version du site en ligne : on propose de recharger la page.
-  const BUILD = '20261117193234';
+  const BUILD = '20261117200739';
   let updateShown = false;
   async function checkUpdate() {
     if (updateShown || BUILD.startsWith('__') || !/^https?:/.test(location.protocol)) return;

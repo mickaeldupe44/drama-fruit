@@ -1,16 +1,26 @@
-import { env, send, body, requireAuth } from '../lib/common.js';
+import { env, send, body } from '../lib/common.js';
+import { requireUser, profile, spend, sendFailure } from '../lib/account.js';
 import { METHOD, mission } from '../lib/method.js';
 import { cleanPack, packToPlan } from '../lib/pack.js';
+import { OFFER } from '../lib/offer.js';
 
 // Étape 1 : la méthode Moteur V4 de Micka + l'idée choisie → PACK.json complet (OpenAI, sinon Grok texte).
 export default async function handler(req, res) {
   if (req.method !== 'POST') return send(res, 405, { error: 'POST attendu.' });
-  if (!requireAuth(req, res)) return;
+  const who = await requireUser(req, res); if (!who) return;
   const llm = env('OPENAI_API_KEY')
     ? { url: 'https://api.openai.com/v1/chat/completions', key: env('OPENAI_API_KEY'), models: [env('OPENAI_MODEL'), 'gpt-5', 'gpt-5-mini', 'gpt-4.1'].filter(Boolean), name: 'OpenAI' }
     : env('XAI_API_KEY') ? { url: 'https://api.x.ai/v1/chat/completions', key: env('XAI_API_KEY'), models: [env('XAI_TEXT_MODEL') || 'grok-4.20-0309-non-reasoning'], name: 'Grok' } : null;
   if (!llm) return send(res, 200, { fallback: true });
   const b = body(req);
+  // Mode payant : « Améliorer avec l'IA » coûte quelques crédits ; écrire ou réécrire un scénario reste gratuit.
+  let balance = 9999;
+  if (!who.test) {
+    try {
+      const p = await profile(who); balance = p.credits;
+      if (b.viral) { const left = await spend(who, p, `boost:${String(b.charge || Date.now()).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64)}`, OFFER.improveCredits || 0, 'Amélioration par l\'IA'); if (left !== null) balance = left; }
+    } catch (e) { if (sendFailure(res, e)) return; console.error('director compte', e); return send(res, 502, { error: 'Le service de comptes ne répond pas, réessaie dans un instant.' }); }
+  }
   const duration = Math.max(12, Math.min(78, Number(b.duration) || 72));
   const scenes = Math.max(2, Math.min(13, Math.round(duration / 6)));
   const cta = (b.outro && b.outro.line) || 'Commente PARTIE 2 et abonne-toi !';
@@ -50,7 +60,7 @@ export default async function handler(req, res) {
     if (Array.isArray(pack.changes)) plan.changes = pack.changes;
     if (b.viral) plan.viral = true;
     info.secondes = Math.round((Date.now() - t0) / 100) / 10;
-    send(res, 200, { plan, balance: 9999, meta: info });
+    send(res, 200, { plan, balance, meta: info });
   } catch (e) {
     console.error('director', e);
     send(res, 200, { fallback: true, warning: String(e.message || e) });

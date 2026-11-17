@@ -46,9 +46,32 @@ Le modèle utilisé, la durée et le nombre de jetons de chaque étape s'affiche
 
 Le serveur retire aussi du scénario les personnages, lieux et objets qu'aucune scène n'utilise : chacun coûtait une image pour rien.
 
+## Passer en mode payant (comptes, crédits, Stripe)
+
+Tant que les réglages Supabase ne sont pas sur Vercel, le site reste en **mode test** (code d'accès, rien n'est facturé). Le mode payant s'allume tout seul dès qu'ils y sont : rien d'autre à changer.
+
+1. **Supabase** (comptes, crédits, vidéothèque). Créer un projet, ouvrir « SQL Editor », coller le fichier `supabase.sql` et lancer. Puis, dans Vercel, ajouter :
+   - `SUPABASE_URL` : l'adresse du projet ;
+   - `SUPABASE_ANON_KEY` : la clé publique (« anon » ou « publishable ») ;
+   - `SUPABASE_SERVICE_KEY` : la clé secrète (« service_role » ou « secret »). Elle ouvre toute la base : uniquement dans Vercel.
+2. **Stripe** (abonnements et packs). Dans Vercel : `STRIPE_SECRET_KEY`. Dans Stripe → Développeurs → Webhooks, ajouter l'adresse `https://TON-SITE/api/stripe` avec les événements `checkout.session.completed`, `invoice.paid`, `customer.subscription.updated` et `customer.subscription.deleted`, puis copier son « secret de signature » dans `STRIPE_WEBHOOK_SECRET`. Activer aussi le portail client (Paramètres → Facturation → Portail client). Les prix viennent de `lib/offer.js` : aucun produit à créer dans Stripe.
+3. `SITE_URL` (facultatif) : l'adresse du site, pour le retour après paiement.
+4. Tes crédits illimités : crée ton compte sur le site, puis dans Supabase → SQL Editor : `update public.profiles set admin = true where email = 'ton@email';`
+5. L'offre gratuite de Vercel interdit l'usage commercial : passer à Vercel Pro avant de vendre.
+
+Ce que fait le mode payant :
+- un compte par e-mail, 35 crédits offerts à l'inscription ;
+- un épisode se paie en entier, une seule fois, au début du tournage ; une scène que Grok ne livre pas est remboursée toute seule ; « Refaire » une scène et « Améliorer avec l'IA » se paient à part ; écrire ou réécrire un scénario reste gratuit ;
+- chaque formule a ses limites (durée, modèles, HD, 1 épisode par jour en Découverte) ;
+- les crédits achetés n'arrivent sur un compte que par les notifications signées de Stripe ;
+- les épisodes sont gardés sur le compte ; la vidéo montée est déposée dans Supabase pour les formules avec vidéothèque.
+
+**Pas encore essayé avec les vrais services.** Tout est vérifié sur un banc local avec un faux Supabase et un faux Stripe. Avant d'ouvrir : faire un achat avec les clés de **test** de Stripe et vérifier que les crédits arrivent, que la vidéo montée se dépose bien (l'offre gratuite de Supabase limite la taille des fichiers) et que la connexion fonctionne.
+
 ## Fichiers
 - `index.html` et `media/` : le site.
-- `api/` : le serveur, une fonction par fichier (config, login, me, library, director, review, image, clip, generate, job, check, media).
-- `lib/` : le code partagé (`common.js` : outils, dont le choix de la résolution vidéo).
+- `api/` : le serveur, une fonction par fichier (config, login, me, director, review, image, clip, generate, job, check, media, stripe). `me` sert aussi `/api/library`, `/api/characters`, `/api/checkout`, `/api/portal` et `/api/store`, grâce à la règle de `vercel.json`.
+- `lib/` : le code partagé (`common.js` : outils ; `offer.js` : formules et prix en crédits ; `account.js` : comptes et débits ; `store.js` : Supabase ; `stripe.js` : paiement).
+- `supabase.sql` : la base de données du mode payant, à coller une fois dans Supabase.
 
 **Attention : 12 fichiers au maximum dans `api/`.** C'est la limite de l'offre gratuite de Vercel (Hobby). Avec un 13ᵉ fichier, Vercel refuse la mise en ligne et le site reste sur l'ancienne version sans prévenir. Pour ajouter une fonction, il faut en regrouper deux, ou ranger le code partagé dans `lib/`.

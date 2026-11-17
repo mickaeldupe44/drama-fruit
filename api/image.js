@@ -1,4 +1,5 @@
-import { env, send, body, requireAuth } from '../lib/common.js';
+import { env, send, body } from '../lib/common.js';
+import { requireUser, charged } from '../lib/account.js';
 import { openaiGenerate, openaiEdit, SCENE_SIZES, sceneQuality } from '../lib/openai.js';
 import { generateImage, editImages } from '../lib/xai.js';
 import { sheetPrompt, lieuPrompt, objetPrompt, scenePrompt } from '../lib/pack.js';
@@ -22,8 +23,10 @@ function setPrompt(s) {
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return send(res, 405, { error: 'POST attendu.' });
-  if (!requireAuth(req, res)) return;
+  const user = await requireUser(req, res); if (!user) return;
   const b = body(req); const p = b.plan || {};
+  // Mode payant : l'épisode se paie une seule fois, au premier appel de son tournage.
+  if (!(await charged(res, user, b)).ok) return;
   const useOpenAI = Boolean(env('OPENAI_API_KEY'));
   if (!useOpenAI && !env('XAI_API_KEY')) return send(res, 500, { error: 'Aucune clé d\'image sur le serveur.' });
   const gen = (prompt, portrait) => (useOpenAI ? openaiGenerate(prompt, '1024x1536') : generateImage(prompt, portrait ? '2:3' : '9:16'));
