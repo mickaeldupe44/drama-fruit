@@ -70,7 +70,8 @@ export default async function handler(req, res) {
       }
       payload.prompt = promptFor(plan, seg, b.lang, refMap);
       // La netteté : sans « resolution », Grok tourne en 480p. Avec des images de référence, 720p est le maximum de xAI.
-      payload.resolution = videoResolution({ refs: refMap.length > 0, hd: Boolean(b.hd) });
+      // Toutes les séquences d'un épisode gardent la résolution acceptée pour la première.
+      payload.resolution = resolution || videoResolution({ refs: refMap.length > 0, hd: Boolean(b.hd) });
       const d = await submitVideo(payload);
       ids.push(d.requestId); resolution = resolution || d.resolution;
     }
