@@ -74,7 +74,7 @@ Ce que le serveur fait déjà :
 - les clés (xAI, OpenAI, Supabase « service », Stripe) ne sont que dans Vercel et ne sont jamais envoyées au site ;
 - les crédits ne bougent que côté serveur : un épisode se paie une fois, la différence est débitée si on demande ensuite plus que ce qui a été payé (plus de scènes, modèle plus cher, HD), et le nombre d'images et de clips par épisode est plafonné ;
 - un remboursement ne porte que sur un clip lancé et payé par le compte, au prix payé, une seule fois ;
-- écrire, relire et vérifier un scénario est offert dans la limite d'un quota mensuel par compte (crédits de la formule ÷ 6, 12 appels au minimum) ; au-delà, chaque appel coûte 2 crédits, un peu plus que son prix de revient ;
+- écrire, relire et vérifier un scénario est offert un certain nombre de fois par mois selon la formule (écrire et relire : crédits de la formule ÷ 25, 4 au minimum ; vérifier : ÷ 12, 6 au minimum) ; au-delà, écrire coûte 3 crédits, relire ou vérifier 2, plus que le prix de revient ; sans abonnement, ces essais sont offerts une seule fois, pas chaque mois ;
 - les crédits achetés n'arrivent que par les notifications signées de Stripe, et une notification rejouée ne compte pas deux fois ;
 - un compte dont l'e-mail n'est pas confirmé n'a accès à rien ;
 - le relais `/api/media` ne sert que les vidéos de Grok (x.ai) et le stockage du site ;

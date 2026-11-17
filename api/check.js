@@ -24,7 +24,7 @@ function sceneSpec(pack, sc) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return send(res, 405, { error: 'POST attendu.' });
   const user = await requireUser(req, res); if (!user) return;
-  try { await limitWriting(user); } catch (e) { if (sendFailure(res, e)) return; console.error('compteur', e); return send(res, 502, { error: 'Le service de comptes ne répond pas, réessaie dans un instant.' }); }
+  try { await limitWriting(user, 'verifier'); } catch (e) { if (sendFailure(res, e)) return; console.error('compteur', e); return send(res, 502, { error: 'Le service de comptes ne répond pas, réessaie dans un instant.' }); }
   const llm = textLlm(); if (!llm) return send(res, 500, { error: 'Aucune IA disponible pour la vérification.' });
   if (llm.name === 'Grok' && env('XAI_VISION_MODEL')) llm.models = [env('XAI_VISION_MODEL')];
   const b = body(req); const pack = b.pack || {}; const frames = Array.isArray(b.frames) ? b.frames : [];

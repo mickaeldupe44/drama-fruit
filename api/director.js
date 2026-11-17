@@ -18,7 +18,7 @@ export default async function handler(req, res) {
   if (!who.test) {
     try {
       const p = await profile(who); balance = p.credits;
-      const afterQuota = await limitWriting(who, p); if (afterQuota !== null) balance = afterQuota;
+      const afterQuota = await limitWriting(who, 'ecrire', p); if (afterQuota !== null) balance = afterQuota;
       if (b.viral) { const left = await spend(who, p, `boost:${String(b.charge || Date.now()).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64)}`, OFFER.improveCredits || 0, 'Amélioration par l\'IA'); if (left !== null) balance = left; }
     } catch (e) { if (sendFailure(res, e)) return; console.error('director compte', e); return send(res, 502, { error: 'Le service de comptes ne répond pas, réessaie dans un instant.' }); }
   }
