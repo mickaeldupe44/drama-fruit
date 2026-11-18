@@ -1,5 +1,5 @@
 import { env, send, body, xaiModel, videoResolution } from '../lib/common.js';
-import { requireUser, charged, recordClip } from '../lib/account.js';
+import { requireUser, charged, recordClip, refundable } from '../lib/account.js';
 import { clipPrompt } from '../lib/pack.js';
 import { submitVideo } from '../lib/xai.js';
 
@@ -29,7 +29,7 @@ export default async function handler(req, res) {
   payload.prompt = clipPrompt(pack, i, refs.map((r, k) => `<IMAGE_${k + offset}> is ${r.label}`));
   try {
     const d = await submitVideo(payload);
-    await recordClip(user, d.requestId, bill.price);
+    await recordClip(user, d.requestId, (await refundable(user, b)) ? bill.price : 0);
     send(res, 200, { requestId: d.requestId, resolution: d.resolution });
   } catch (e) {
     if (e.status) return send(res, e.status === 429 ? 429 : 502, { error: `Grok a refusé la scène ${i + 1} : ${e.message}`, code: e.status === 429 ? 'rate_limited' : 'clip_failed' });

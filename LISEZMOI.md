@@ -95,6 +95,7 @@ Au pire des cas, un crédit dépensé coûte au site environ 0,04 $, et un créd
 - garder les images en qualité « medium » (`OPENAI_IMAGE_QUALITY` et `OPENAI_SCENE_QUALITY`) : en « high », une image de scène coûte plus que les 3 crédits demandés ;
 - garder une clé OpenAI : sans elle, les images passent par Grok et coûtent environ le double ;
 - revoir `lib/offer.js` (et `DEFAULT_OFFER` dans `index.html`) si xAI ou OpenAI changent leurs tarifs, ou si on remet une option HD ;
+- ce que le serveur refuse pour qu'un tricheur ne puisse pas faire payer le site : plus d'un clip par scène payée (une petite marge pour les nouveaux essais), une scène refaite rejouée en boucle pour un seul paiement, plus de quelques grandes images de scène par épisode, le remboursement d'un clip qui n'a pas été payé ;
 - le seul cadeau est l'épisode offert à l'inscription (environ 1 $ par nouveau compte).
 
 ## Fichiers
