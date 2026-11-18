@@ -79,6 +79,8 @@ export default async function handler(req, res) {
       const d = await submitVideo(payload);
       ids.push(d.requestId); resolution = resolution || d.resolution;
       if (repayable === null) repayable = await refundable(user, b, 'gen');
+      // Deuxième appel alors que l'épisode a déjà été tourné : on s'arrête là, sinon un seul paiement donnerait deux tournages.
+      if (!repayable && !user.test) return send(res, 429, { error: 'Cet épisode a déjà été tourné. Lance un nouvel épisode.', code: 'rate_limited' });
       await recordClip(user, d.requestId, repayable ? Math.round(bill.price * (Number(payload.duration) || 6) / 6) : 0);
     }
     const jobId = encodeJob({ r: ids, m: b.model || model, d: duration, t: String(plan.title || 'Épisode').slice(0, 80), c: Date.now(), q: resolution });

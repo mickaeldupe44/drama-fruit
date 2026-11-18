@@ -91,6 +91,8 @@ Ce qu'il te reste à régler toi-même :
 
 Prix de revient relevés le 17 novembre 2026 (en dollars) : Grok Imagine 1.5 en 720p 0,14 $ la seconde, Lite 0,03 $ ; une image OpenAI en qualité « medium » environ 0,04 à 0,08 $ ; un scénario écrit et relu environ 0,20 $.
 
+Formules depuis le 18 novembre 2026 : Starter 12,99 € pour 160 crédits (un épisode de 30 s en Grok 1.5), Pro 29,99 € pour 370 (un épisode de 72 s), Studio 79,99 € pour 1 020 (trois épisodes de 72 s). Une fois l'IA et Stripe payés, il reste environ 7 €, 17 € et 44 € par abonné et par mois, avant cotisations et impôts. Les packs n'ont pas changé.
+
 Au pire des cas, un crédit dépensé coûte au site environ 0,04 $, et un crédit vendu rapporte au moins 0,063 € une fois retirés les frais Stripe et 20 % de TVA. Pour que cela reste vrai :
 - garder les images en qualité « medium » (`OPENAI_IMAGE_QUALITY` et `OPENAI_SCENE_QUALITY`) : en « high », une image de scène coûte plus que les 3 crédits demandés ;
 - garder une clé OpenAI : sans elle, les images passent par Grok et coûtent environ le double ;
